@@ -21,6 +21,7 @@ import {OfficialCalendar,calendarStatus,calendarSource} from './calendar.js';
 import {LEGACY_QUOTE,ExchangeRates,money,toPence} from './currency.js';
 import {BANK,borrow,dateLabel,debt,loanRestriction,record,repay,settlePrize} from './economy.js';
 const $=id=>document.getElementById(id);
+const desktopHost=window.desktopBilliards??window.chrome?.webview;
 let view,world,ref,mode='nine',started=false,paused=false,ballInHand=false,guide=true,spin={x:0,y:0},power=0,drag=null,keys=new Set(),accumulator=0,last=performance.now(),lastPaint=0,dirty=true,eventCursor=0;
 const audio=new BilliardAudio();
 let desktop=window.DESKTOP_SOURCE||{wallpaper:null};
@@ -52,7 +53,7 @@ const held=action=>keys.has(action);
 function refreshBindingHint(){$('settings-hint').textContent=keyLabel(bindings.bindings.settings)+' · 设置';}
 function updateWindowMode(){
  const toggle=$('floating-window');
- toggle.hidden=typeof window.BILLIARDS_WINDOW_MODE!=='boolean';
+ toggle.hidden=!desktopHost;
  toggle.textContent=floatingWindow?'返回全屏':'开启悬浮窗';
  toggle.setAttribute('aria-pressed',String(floatingWindow));
  document.body.classList.toggle('floating-window',floatingWindow);
@@ -445,7 +446,7 @@ function goBack(){
  if(started){setup(mode);return;}
  exit();
 }
-function exit(){if(!prepareClose())return;if(window.chrome?.webview)window.chrome.webview.postMessage({type:'exit'});else{if(started&&!ref.done&&!$('settings').open)settingsUI.open();toast(tournament?.showcase?'可关闭此标签页结束观赛':'未完成的球局已保存，可关闭此标签页退出');}}
+function exit(){if(!prepareClose())return;if(desktopHost)desktopHost.postMessage({type:'exit'});else{if(started&&!ref.done&&!$('settings').open)settingsUI.open();toast(tournament?.showcase?'可关闭此标签页结束观赛':'未完成的球局已保存，可关闭此标签页退出');}}
 function shot(){
  if(!canShoot()){power=0;updatePower();return;}
  if(power<.015){power=0;updatePower();return;}
@@ -631,10 +632,11 @@ settingsUI=new SettingsUI($('settings'),bindings,{close:resume,changed:()=>{canc
 refreshBindingHint();updateOptions();
 try{
  view=new BilliardScene($('scene'));placementUI=new PlacementUI($('placement-map'),()=>world,placeAt);setDesktop(desktop);requestAnimationFrame(frame);
- if(!window.BILLIARDS_TEST||window.BILLIARDS_RESET_TUTORIAL)tutorial.openOnFirstRun(window.BILLIARDS_RESET_TUTORIAL);
+ const reset=window.BILLIARDS_RESET_TUTORIAL||desktopHost?.resetTutorial;
+ if(!window.BILLIARDS_TEST||reset)tutorial.openOnFirstRun(reset);
 }catch(e){fail(e);}
 updateWindowMode();
-window.chrome?.webview?.addEventListener('message',event=>{
+const onDesktopMessage=event=>{
  if(event.data.type==='desktop')setDesktop(event.data.payload);
  if(event.data.type==='pause'&&!floatingWindow&&started&&!paused)togglePause();
  if(event.data.type==='windowMode'){
@@ -643,7 +645,9 @@ window.chrome?.webview?.addEventListener('message',event=>{
   $('floating-window').disabled=false;
   if($('settings').open)resume();
  }
-});
+};
+if(desktopHost?.onMessage)desktopHost.onMessage(onDesktopMessage);
+else desktopHost?.addEventListener('message',onDesktopMessage);
 function start(difficulty=null,eventKey=null,quote=exchange.quote,showcase=false){
  if(started||paused)return;
  if(eventKey&&difficulty==='low'&&eventKey!=='club'){
@@ -962,7 +966,7 @@ $('coach-apply').addEventListener('click',()=>{
 $('settings-close').addEventListener('click',resume);
 $('tutorial-open').addEventListener('click',()=>tutorial.open());
 $('floating-window').addEventListener('click',()=>{
- const bridge=window.chrome?.webview;
+ const bridge=desktopHost;
  if(!bridge)return;
  $('floating-window').disabled=true;
  bridge.postMessage({type:'toggleFloating'});

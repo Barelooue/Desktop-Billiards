@@ -1,10 +1,11 @@
 {
   "name": "desktop-billiards",
-  "version": "0.5.0",
+  "version": "0.6.0",
   "private": true,
   "type": "module",
   "scripts": {
     "build:web": "node scripts/build.mjs",
+    "build:mac": "python3 scripts/build-mac.py",
     "build": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/build.ps1",
     "test": "node --test tests/*.test.mjs",
     "test:ui": "node tests/ui.mjs",

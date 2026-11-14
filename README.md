@@ -4,11 +4,19 @@
 
 ![Desktop Billiards 卡通宣传图](assets/banner.png)
 
-一个 Windows 3D 台球游戏。可以在窄袋台上练习九球、中式八球和斯诺克，也可以报名与四档电脑对手比赛。游戏界面为简体中文，上方链接切换的是项目文档。
+一个支持 Windows 和 macOS 的 3D 台球游戏。可以在窄袋台上练习九球、中式八球和斯诺克，也可以报名与四档电脑对手比赛。游戏界面为简体中文，上方链接切换的是项目文档。
 
 **悬浮窗**。Windows 版按 `F1` 进入设置，可开启置顶、等比缩放的悬浮窗。切换到其他应用时对局继续。
 
 **高手如云**。九球、中式八球和斯诺克均支持双高档人机观赛。选择赛事后可随时接管甲方或乙方，再交还电脑。进度只保留到离开这场比赛，观赛和接管不影响游戏资金。
+
+## 下载
+
+- [Windows 10/11 x64](https://github.com/Barelooue/Desktop-Billiards/releases/download/v0.6.0/Desktop-Billiards-v0.6.0-Windows-x64.zip)
+- [Mac · Apple Silicon（M 系列）](https://github.com/Barelooue/Desktop-Billiards/releases/download/v0.6.0/Desktop-Billiards-v0.6.0-macOS-arm64.zip)
+- [Mac · Intel](https://github.com/Barelooue/Desktop-Billiards/releases/download/v0.6.0/Desktop-Billiards-v0.6.0-macOS-x64.zip)
+
+点击对应版本下载 ZIP，解压后打开 Windows 的 `DesktopBilliards.exe` 或 Mac 的 `Desktop Billiards.app`。Mac 版要求 macOS 13 或更新版本，目前为未公证预览版。 [Mac 运行及构建说明](mac/README.md)
 
 ## 在自己的电脑上运行
 

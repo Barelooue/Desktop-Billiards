@@ -174,6 +174,12 @@ export function calendarStatus(event,today=calendarToday()){
 export const calendarSource=event=>LABELS[event.source];
 
 export function nativeCalendarFetch(source){
+ if(globalThis.desktopBilliards){
+  return globalThis.desktopBilliards.readCalendar(source).then(value=>{
+   if(typeof value!=='string')throw Error('Calendar source unavailable');
+   return value;
+  });
+ }
  const host=globalThis.chrome?.webview;
  if(!host)return fetch(SOURCES[source],{signal:AbortSignal.timeout(7000)}).then(response=>{
   if(!response.ok)throw Error('Calendar request failed');

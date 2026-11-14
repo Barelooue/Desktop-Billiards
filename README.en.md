@@ -4,11 +4,19 @@
 
 ![Desktop Billiards arcade artwork](assets/banner.png)
 
-A 3D billiards game for Windows. Practice nine-ball on a tight-pocket table, Chinese eight-ball (Heyball), or snooker. You can also enter tournaments against four levels of computer opponents. The game interface is in Simplified Chinese.
+A 3D billiards game for Windows and macOS. Practice nine-ball on a tight-pocket table, Chinese eight-ball (Heyball), or snooker. You can also enter tournaments against four levels of computer opponents. The game interface is in Simplified Chinese.
 
 **Floating window.** Open settings with `F1` on Windows to switch to an always-on-top window with proportional resizing. Play continues when you switch apps.
 
 **Showcase mode.** Watch two high-level computer players compete in nine-ball, Heyball or snooker. Take over either side and hand it back to the computer at any time. Leaving the match discards its progress. Watching and taking over do not affect your game balance.
+
+## Download
+
+- [Windows 10/11 x64](https://github.com/Barelooue/Desktop-Billiards/releases/download/v0.6.0/Desktop-Billiards-v0.6.0-Windows-x64.zip)
+- [Mac · Apple Silicon (M series)](https://github.com/Barelooue/Desktop-Billiards/releases/download/v0.6.0/Desktop-Billiards-v0.6.0-macOS-arm64.zip)
+- [Mac · Intel](https://github.com/Barelooue/Desktop-Billiards/releases/download/v0.6.0/Desktop-Billiards-v0.6.0-macOS-x64.zip)
+
+Choose your platform, extract the ZIP, then open `DesktopBilliards.exe` on Windows or `Desktop Billiards.app` on Mac. The Mac builds require macOS 13 or later and are previews without Apple notarization. [Mac setup and build notes](mac/README.md)
 
 ## Run locally
 

@@ -4,11 +4,19 @@
 
 ![Illustration d’arcade de Desktop Billiards](assets/banner.png)
 
-Un jeu de billard en 3D pour Windows. Entraînez-vous au jeu de la 9 sur une table à poches étroites, au billard chinois à 8 billes (Heyball) ou au snooker. Vous pouvez aussi participer à des tournois contre quatre niveaux d’adversaires contrôlés par l’ordinateur. L’interface du jeu est en chinois simplifié.
+Un jeu de billard en 3D pour Windows et macOS. Entraînez-vous au jeu de la 9 sur une table à poches étroites, au billard chinois à 8 billes (Heyball) ou au snooker. Vous pouvez aussi participer à des tournois contre quatre niveaux d’adversaires contrôlés par l’ordinateur. L’interface du jeu est en chinois simplifié.
 
 **Fenêtre flottante.** Sous Windows, ouvrez les réglages avec `F1` pour afficher une fenêtre au premier plan que vous pouvez redimensionner en conservant ses proportions. La partie continue lorsque vous changez d’application.
 
 **Mode spectateur (高手如云).** Regardez deux adversaires de niveau élevé disputer un tournoi de 9, de Heyball ou de snooker. Prenez le contrôle de l’un des deux camps et rendez-le à l’ordinateur à tout moment. La progression est effacée en quittant le match. Le solde de jeu reste intact.
+
+## Téléchargement
+
+- [Windows 10/11 x64](https://github.com/Barelooue/Desktop-Billiards/releases/download/v0.6.0/Desktop-Billiards-v0.6.0-Windows-x64.zip)
+- [Mac · Apple Silicon (série M)](https://github.com/Barelooue/Desktop-Billiards/releases/download/v0.6.0/Desktop-Billiards-v0.6.0-macOS-arm64.zip)
+- [Mac · Intel](https://github.com/Barelooue/Desktop-Billiards/releases/download/v0.6.0/Desktop-Billiards-v0.6.0-macOS-x64.zip)
+
+Téléchargez le ZIP correspondant, décompressez-le, puis ouvrez `DesktopBilliards.exe` sous Windows ou `Desktop Billiards.app` sur Mac. Les versions Mac nécessitent macOS 13 ou ultérieur et sont en préversion sans notarisation Apple. [Installation et compilation sur Mac](mac/README.md)
 
 ## Jouer sur votre ordinateur
 

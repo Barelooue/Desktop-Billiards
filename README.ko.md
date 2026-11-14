@@ -4,11 +4,19 @@
 
 ![Desktop Billiards 아케이드 스타일 일러스트](assets/banner.png)
 
-Windows용 3D 당구 게임입니다. 포켓이 좁은 테이블에서 9볼, 중국식 8볼(Heyball), 스누커를 연습하거나 네 가지 난이도의 컴퓨터를 상대로 대회에 참가할 수 있습니다. 게임 화면은 중국어 간체로 표시됩니다.
+Windows와 macOS용 3D 당구 게임입니다. 포켓이 좁은 테이블에서 9볼, 중국식 8볼(Heyball), 스누커를 연습하거나 네 가지 난이도의 컴퓨터를 상대로 대회에 참가할 수 있습니다. 게임 화면은 중국어 간체로 표시됩니다.
 
 **플로팅 창.** Windows에서 `F1`로 설정을 열어 화면 비율을 유지하는 항상 위 창으로 전환할 수 있습니다. 다른 앱으로 전환해도 경기는 계속됩니다.
 
 **관전 모드(高手如云).** 9볼, Heyball, 스누커 대회에서 상급 컴퓨터 플레이어 두 명의 경기를 볼 수 있습니다. 어느 쪽이든 직접 조작한 뒤 다시 컴퓨터에 맡길 수 있습니다. 경기를 나가면 진행 상황이 사라지며 게임 자금에는 영향이 없습니다.
+
+## 다운로드
+
+- [Windows 10/11 x64](https://github.com/Barelooue/Desktop-Billiards/releases/download/v0.6.0/Desktop-Billiards-v0.6.0-Windows-x64.zip)
+- [Mac · Apple Silicon(M 시리즈)](https://github.com/Barelooue/Desktop-Billiards/releases/download/v0.6.0/Desktop-Billiards-v0.6.0-macOS-arm64.zip)
+- [Mac · Intel](https://github.com/Barelooue/Desktop-Billiards/releases/download/v0.6.0/Desktop-Billiards-v0.6.0-macOS-x64.zip)
+
+해당 ZIP 파일을 풀고 Windows에서는 `DesktopBilliards.exe`, Mac에서는 `Desktop Billiards.app`을 실행하세요. Mac 버전은 macOS 13 이상이 필요하며 Apple 공증을 받지 않은 미리 보기입니다. [Mac 실행 및 빌드 안내](mac/README.md)
 
 ## 내 컴퓨터에서 실행
 

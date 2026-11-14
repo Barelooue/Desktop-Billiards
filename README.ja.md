@@ -4,11 +4,19 @@
 
 ![Desktop Billiards のアーケード風イラスト](assets/banner.png)
 
-Windows 向けの 3D ビリヤードゲームです。ポケットの狭い台でのナインボール、中国式エイトボール（Heyball）、スヌーカーを練習できます。4 段階のコンピューター対戦と大会もあります。ゲーム画面は簡体字中国語です。
+Windows と macOS 向けの 3D ビリヤードゲームです。ポケットの狭い台でのナインボール、中国式エイトボール（Heyball）、スヌーカーを練習できます。4 段階のコンピューター対戦と大会もあります。ゲーム画面は簡体字中国語です。
 
 **フローティングウィンドウ。** Windows 版では `F1` の設定から、縦横比を保って拡大縮小できる最前面ウィンドウに切り替えられます。他のアプリに切り替えても対戦は続きます。
 
 **観戦モード（高手如云）。** ナインボール、Heyball、スヌーカーで上級コンピューター同士の大会を観戦できます。どちらの側でも操作を引き継ぎ、コンピューターに戻せます。対戦を離れると進行は破棄され、ゲーム内残高には影響しません。
+
+## ダウンロード
+
+- [Windows 10/11 x64](https://github.com/Barelooue/Desktop-Billiards/releases/download/v0.6.0/Desktop-Billiards-v0.6.0-Windows-x64.zip)
+- [Mac · Apple Silicon（M シリーズ）](https://github.com/Barelooue/Desktop-Billiards/releases/download/v0.6.0/Desktop-Billiards-v0.6.0-macOS-arm64.zip)
+- [Mac · Intel](https://github.com/Barelooue/Desktop-Billiards/releases/download/v0.6.0/Desktop-Billiards-v0.6.0-macOS-x64.zip)
+
+対応する ZIP を展開し、Windows では `DesktopBilliards.exe`、Mac では `Desktop Billiards.app` を開いてください。Mac 版は macOS 13 以降が必要な、公証前のプレビュー版です。 [Mac の起動とビルド手順](mac/README.md)
 
 ## ローカルでの起動
 
