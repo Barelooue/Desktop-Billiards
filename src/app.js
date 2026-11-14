@@ -5,6 +5,7 @@ import {zoneLabel,keyboardPlacementStart} from './placement.js';
 import {PlacementUI} from './placement-ui.js';
 import {KeyBindings,keyFromEvent,keyLabel} from './keybindings.js';
 import {SettingsUI} from './settings.js';
+import {Tutorial} from './tutorial.js';
 import {BilliardAudio} from './audio.js';
 import {OBSERVATION_HEIGHT} from './observation.js';
 import {HistoryStore,RoundClock,formatTime,captureRound,restoreRound,ROUND_RETENTION_MS} from './session.js';
@@ -28,6 +29,7 @@ let toastTimer;
 let historyExpiryTimer;
 let placementUI,settingsUI,lastPointerX=null,spinDrag=false,soundEnabled=true;
 let storage;try{storage=window.localStorage;}catch{}
+const tutorial=new Tutorial($('tutorial'),storage);
 const bindings=new KeyBindings(storage),heldCodes=new Map();
 const history=new HistoryStore(storage),roundClock=new RoundClock();
 const exchange=new ExchangeRates(storage);
@@ -427,9 +429,10 @@ function updatePower(){
 function updateSpin(){const length=Math.hypot(spin.x,spin.y);if(length>1){spin.x/=length;spin.y/=length;}$('spin-dot').style.left=50+spin.x*40+'%';$('spin-dot').style.top=50-spin.y*40+'%';$('spin-pad').setAttribute('aria-valuenow',String(Math.round(Math.hypot(spin.x,spin.y)*80)));$('spin-description').textContent=(Math.abs(spin.x)<.1?'':spin.x<0?'左塞 · ':'右塞 · ')+(Math.abs(spin.y)<.1?'中心击球':spin.y>0?'高杆':'低杆');dirty=true;}
 function setGuide(value){guide=value;updateOptions();dirty=true;}
 function updateOptions(){$('options-status').textContent=`音效 ${soundEnabled?'开':'关'}`;for(const button of document.querySelectorAll('[data-guide]')){button.textContent=`辅助线：${guide?'开':'关'}`;button.setAttribute('aria-pressed',String(guide));}}
-function togglePause(){if(['result','take-over-dialog','history','rule-choice','opening-break','difficulty','event-dialog','bank'].some(id=>$(id).open))return;if($('settings').open){resume();return;}roundClock.pause();paused=true;audio.stop();cancelAction();settingsUI.open();saveRound();dirty=true;}
+function togglePause(){if(['tutorial','result','take-over-dialog','history','rule-choice','opening-break','difficulty','event-dialog','bank'].some(id=>$(id).open))return;if($('settings').open){resume();return;}roundClock.pause();paused=true;audio.stop();cancelAction();settingsUI.open();saveRound();dirty=true;}
 function resume(){$('settings').close();$('scene').focus({preventScroll:true});cancelAction();paused=false;if(started&&!ref.done)roundClock.start();last=performance.now();accumulator=0;dirty=true;}
 function goBack(){
+ if($('tutorial').open){tutorial.close();return;}
  if($('take-over-dialog').open){closeTakeOver();return;}
  if($('bank').open){closeBank();return;}
  if($('event-dialog').open){closeEvents();return;}
@@ -628,6 +631,7 @@ settingsUI=new SettingsUI($('settings'),bindings,{close:resume,changed:()=>{canc
 refreshBindingHint();updateOptions();
 try{
  view=new BilliardScene($('scene'));placementUI=new PlacementUI($('placement-map'),()=>world,placeAt);setDesktop(desktop);requestAnimationFrame(frame);
+ if(!window.BILLIARDS_TEST||window.BILLIARDS_RESET_TUTORIAL)tutorial.openOnFirstRun(window.BILLIARDS_RESET_TUTORIAL);
 }catch(e){fail(e);}
 updateWindowMode();
 window.chrome?.webview?.addEventListener('message',event=>{
@@ -956,6 +960,7 @@ $('coach-apply').addEventListener('click',()=>{
  $('scene').focus({preventScroll:true});
 });
 $('settings-close').addEventListener('click',resume);
+$('tutorial-open').addEventListener('click',()=>tutorial.open());
 $('floating-window').addEventListener('click',()=>{
  const bridge=window.chrome?.webview;
  if(!bridge)return;
@@ -1059,7 +1064,7 @@ const continuous=new Set(['walkLeft','walkRight','heightUp','heightDown','adjust
 // Esc is fixed and must work even while a binding field or modal has focus.
 window.addEventListener('keydown',e=>{if(e.code==='Escape'){e.preventDefault();e.stopImmediatePropagation();if(!e.repeat)goBack();}},{capture:true});
 window.addEventListener('keydown',e=>{
- if(e.defaultPrevented||e.isComposing)return;
+ if(e.defaultPrevented||e.isComposing||$('tutorial').open)return;
  const code=keyFromEvent(e),action=bindings.action(code);
  if(paused){ // Binding inputs stop propagation; these actions also work in settings.
   if(e.repeat||!$('settings').open)return;

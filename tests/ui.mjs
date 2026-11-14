@@ -10,6 +10,7 @@ let browser;
 try{
  browser=await chromium.launch({channel:'msedge',headless:true,args:['--enable-webgl','--ignore-gpu-blocklist']});
  const page=await browser.newPage({viewport:{width:1440,height:900},deviceScaleFactor:1.5}),errors=[];
+ await page.addInitScript(()=>{window.BILLIARDS_TEST=true;});
  page.on('pageerror',e=>errors.push(e.message));page.on('console',m=>{if(m.type()==='error')errors.push(m.text());});
  await page.goto('http://127.0.0.1:8441');await page.waitForFunction(()=>window.billiards?.world);
  assert.equal(await page.locator('button[data-mode]').count(),3);

@@ -19,6 +19,7 @@ let browser;
 try{
  browser=await chromium.launch({channel:'msedge',headless:true,args:['--enable-webgl','--ignore-gpu-blocklist']});
  const page=await browser.newPage({viewport:{width:1280,height:800}}),errors=[];
+ await page.addInitScript(()=>{window.BILLIARDS_TEST=true;});
  page.on('pageerror',error=>errors.push(error.message));
  await page.route('https://data-api.ecb.europa.eu/**',route=>route.fulfill({
   headers:{'access-control-allow-origin':'*','content-type':'text/csv'},

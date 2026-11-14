@@ -34,10 +34,11 @@ internal sealed class TableWindow:Form {
  const int WmSizing=0x0214;
  [StructLayout(LayoutKind.Sequential)] struct SizingRect { public int Left,Top,Right,Bottom; }
  WebView2 web; bool test,closeReady,closing;
- bool floating,switchingWindowMode,testWindowed;
+ bool floating,switchingWindowMode,testWindowed,resetTutorial;
  Rectangle floatingBounds;
  public TableWindow(string[] args) {
   test=args.Contains("--test"); Text="一个人的台球 · Desktop Billiards"; BackColor=Color.FromArgb(17,27,25);
+  resetTutorial=args.Contains("--reset-tutorial");
   Icon=Icon.ExtractAssociatedIcon(Application.ExecutablePath);
   testWindowed=test&&!args.Contains("--fullscreen");
   FormBorderStyle=testWindowed?FormBorderStyle.Sizable:FormBorderStyle.None;
@@ -70,7 +71,7 @@ internal sealed class TableWindow:Form {
    core.PermissionRequested+=(s,e)=>e.State=CoreWebView2PermissionState.Deny;
    core.WebMessageReceived+=OnWebMessage;
    string desktop=await Task.Run(()=>DesktopSource.Read());
-   await core.AddScriptToExecuteOnDocumentCreatedAsync("window.DESKTOP_SOURCE="+desktop+";window.BILLIARDS_TEST="+(test?"true":"false")+";window.BILLIARDS_WINDOW_MODE="+(floating?"true":"false")+";");
+   await core.AddScriptToExecuteOnDocumentCreatedAsync("window.DESKTOP_SOURCE="+desktop+";window.BILLIARDS_TEST="+(test?"true":"false")+";window.BILLIARDS_WINDOW_MODE="+(floating?"true":"false")+";window.BILLIARDS_RESET_TUTORIAL="+(resetTutorial?"true":"false")+";");
    core.Navigate("https://billiards.local/index.html");
   }catch(Exception ex){MessageBox.Show(this,"无法启动球台。请确认已安装 Microsoft Edge WebView2 Runtime。\n\n"+ex.Message,"一个人的台球",MessageBoxButtons.OK,MessageBoxIcon.Error);Close();}
  }

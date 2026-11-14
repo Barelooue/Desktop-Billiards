@@ -105,6 +105,37 @@ body.floating-window .settings-heading{position:static}
 .wallet-home button{font-size:14px;white-space:nowrap}
 #event-stage{font-size:11px;margin-top:7px;color:var(--mint)}
 #take-over{margin-top:8px;font-size:12px;padding:6px 12px}
+#tutorial{width:min(830px,94vw);max-height:94vh;padding:clamp(12px,2.6vw,25px);box-shadow:0 22px 80px #000a}
+.tutorial-header,.tutorial-footer{display:flex;justify-content:space-between;align-items:center;gap:14px}
+.tutorial-header{margin-bottom:12px}
+#tutorial-title{font-size:clamp(19px,3vw,28px);margin:0;font-weight:600}
+#tutorial-close{padding:3px 11px;font-size:23px;line-height:1.25}
+.tutorial-picture{position:relative;background:#0c1713;border:1px solid #b3cdb13d;border-radius:12px;overflow:hidden}
+.tutorial-picture img{display:block;width:100%;height:auto;max-height:55vh;object-fit:contain}
+.tutorial-picture button{position:absolute;top:50%;transform:translateY(-50%);display:grid;place-items:center;width:58px;height:62px;padding:0;background:transparent;border:0;color:#edf8ec;font-size:48px;font-weight:650;line-height:1;text-shadow:0 2px 10px #000,0 1px 4px #000}
+.tutorial-picture button:focus-visible{outline:0;color:var(--mint);text-shadow:0 2px 10px #000,0 0 12px #c4e6bb88}
+.tutorial-picture button:not(:disabled) span{animation:tutorial-nudge 1.55s ease-in-out infinite}
+.tutorial-picture button:hover:not(:disabled){color:var(--mint)}
+.tutorial-picture button:disabled{visibility:hidden}
+#tutorial-prev{left:9px}
+#tutorial-next{right:9px}
+#tutorial-prev span{--nudge:-7px}
+#tutorial-next span{--nudge:7px}
+@keyframes tutorial-nudge{0%,100%{transform:translateX(0)}50%{transform:translateX(var(--nudge))}}
+@media(prefers-reduced-motion:reduce){.tutorial-picture button:not(:disabled) span{animation:none}}
+.tutorial-copy{min-height:76px;padding-block:12px}
+.tutorial-copy h3{margin:0 0 5px;color:#edf8ec;font-size:clamp(15px,2.4vw,20px)}
+.tutorial-copy p{margin:0;color:#d1dfd2;font-size:clamp(12px,1.7vw,14px);line-height:1.6}
+.tutorial-footer{border-top:1px solid var(--line);padding-top:9px}
+#tutorial-counter{color:var(--muted);font-size:13px;font-variant-numeric:tabular-nums}
+#tutorial-finish{font-size:13px;color:var(--mint);padding:7px 13px}
+@media(max-height:520px){
+ #tutorial{padding:12px}
+ .tutorial-header{margin-bottom:8px}
+ .tutorial-picture img{max-height:46vh}
+ .tutorial-copy{min-height:0;padding-block:8px}
+ .tutorial-footer{padding-top:6px}
+}
 header:has(.match-scoreboard:not([hidden])) .top-status{display:none}
 .match-scoreboard{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);display:grid;grid-template-columns:1fr auto 1fr;align-items:center;width:min(364px,46vw);min-height:62px;padding:7px 14px;border:1px solid #b8d6b45c;border-radius:13px;background:#12211ff7;box-shadow:0 7px 26px #0005;text-align:center;pointer-events:none}
 .scoreboard-side{display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:center;gap:7px;color:#d4e1d0;font-size:13px;white-space:nowrap}
