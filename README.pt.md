@@ -2,6 +2,8 @@
 
 [简体中文](README.md) · [English](README.en.md) · [日本語](README.ja.md) · [Français](README.fr.md) · [한국어](README.ko.md) · [Português](README.pt.md)
 
+![Ilustração em estilo arcade de Desktop Billiards](assets/banner.png)
+
 Um jogo de bilhar 3D para Windows. Pratique bola 9 numa mesa de caçapas estreitas, bola 8 chinesa (Heyball) ou snooker. Também é possível disputar torneios contra quatro níveis de adversários controlados pelo computador. A interface do jogo está em chinês simplificado.
 
 **Janela flutuante.** No Windows, abra as configurações com `F1` para usar uma janela sempre visível e redimensionável com proporção fixa. A partida continua ao alternar para outro aplicativo.

@@ -2,6 +2,8 @@
 
 [简体中文](README.md) · [English](README.en.md) · [日本語](README.ja.md) · [Français](README.fr.md) · [한국어](README.ko.md) · [Português](README.pt.md)
 
+![Desktop Billiards arcade artwork](assets/banner.png)
+
 A 3D billiards game for Windows. Practice nine-ball on a tight-pocket table, Chinese eight-ball (Heyball), or snooker. You can also enter tournaments against four levels of computer opponents. The game interface is in Simplified Chinese.
 
 **Floating window.** Open settings with `F1` on Windows to switch to an always-on-top window with proportional resizing. Play continues when you switch apps.

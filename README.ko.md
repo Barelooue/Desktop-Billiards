@@ -2,6 +2,8 @@
 
 [简体中文](README.md) · [English](README.en.md) · [日本語](README.ja.md) · [Français](README.fr.md) · [한국어](README.ko.md) · [Português](README.pt.md)
 
+![Desktop Billiards 아케이드 스타일 일러스트](assets/banner.png)
+
 Windows용 3D 당구 게임입니다. 포켓이 좁은 테이블에서 9볼, 중국식 8볼(Heyball), 스누커를 연습하거나 네 가지 난이도의 컴퓨터를 상대로 대회에 참가할 수 있습니다. 게임 화면은 중국어 간체로 표시됩니다.
 
 **플로팅 창.** Windows에서 `F1`로 설정을 열어 화면 비율을 유지하는 항상 위 창으로 전환할 수 있습니다. 다른 앱으로 전환해도 경기는 계속됩니다.

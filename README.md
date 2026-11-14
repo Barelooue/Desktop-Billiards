@@ -2,6 +2,8 @@
 
 [简体中文](README.md) · [English](README.en.md) · [日本語](README.ja.md) · [Français](README.fr.md) · [한국어](README.ko.md) · [Português](README.pt.md)
 
+![Desktop Billiards 卡通宣传图](assets/banner.png)
+
 一个 Windows 3D 台球游戏。可以在窄袋台上练习九球、中式八球和斯诺克，也可以报名与四档电脑对手比赛。游戏界面为简体中文，上方链接切换的是项目文档。
 
 **悬浮窗**。Windows 版按 `F1` 进入设置，可开启置顶、等比缩放的悬浮窗。切换到其他应用时对局继续。

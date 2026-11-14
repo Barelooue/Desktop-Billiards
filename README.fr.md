@@ -2,6 +2,8 @@
 
 [简体中文](README.md) · [English](README.en.md) · [日本語](README.ja.md) · [Français](README.fr.md) · [한국어](README.ko.md) · [Português](README.pt.md)
 
+![Illustration d’arcade de Desktop Billiards](assets/banner.png)
+
 Un jeu de billard en 3D pour Windows. Entraînez-vous au jeu de la 9 sur une table à poches étroites, au billard chinois à 8 billes (Heyball) ou au snooker. Vous pouvez aussi participer à des tournois contre quatre niveaux d’adversaires contrôlés par l’ordinateur. L’interface du jeu est en chinois simplifié.
 
 **Fenêtre flottante.** Sous Windows, ouvrez les réglages avec `F1` pour afficher une fenêtre au premier plan que vous pouvez redimensionner en conservant ses proportions. La partie continue lorsque vous changez d’application.
