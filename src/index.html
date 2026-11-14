@@ -1,0 +1,88 @@
+<!doctype html>
+<html lang="zh-CN"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="color-scheme" content="dark"><link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Ccircle cx='16' cy='16' r='14' fill='%23c4e6bb'/%3E%3Ccircle cx='16' cy='16' r='9' fill='%2314231f'/%3E%3C/svg%3E"><title>一个人的台球 · Desktop Billiards</title><link rel="stylesheet" href="style.css"></head>
+<body>
+ <div id="backdrop"></div><div id="veil"></div><canvas id="scene" tabindex="-1" aria-label="三维台球桌"></canvas>
+ <header>
+  <div class="brand"><span class="brand-icon">◉</span><span>一个人的台球 <small>SOLO BILLIARDS</small></span></div>
+  <div class="top-status"><span class="dot"></span><span id="source-status">桌面台球 · 本地运行</span></div>
+  <div id="match-scoreboard" class="match-scoreboard" role="group" aria-label="大比分" hidden>
+   <div class="scoreboard-side"><span>你</span><b id="scoreboard-player">0</b></div>
+   <div class="scoreboard-format"><span>大比分</span><strong id="scoreboard-race"></strong></div>
+   <div class="scoreboard-side"><b id="scoreboard-computer">0</b><span>电脑</span></div>
+  </div>
+  <div class="header-actions"><span class="exit-hint">Esc · 返回</span><button type="button" id="settings-hint" class="settings-hint">F1 · 设置</button></div>
+ </header>
+ <section id="welcome">
+  <div class="wallet-home"><span id="home-wallet"></span><button type="button" id="bank-open">银行贷款</button></div>
+  <div class="intro"><div class="eyebrow">YOUR DESKTOP. YOUR TABLE.</div><h1>让桌面，<br>成为你的球场。</h1><p>一张球桌，一刻专注。<br>给忙碌留一杆的空隙。</p></div>
+  <div class="setup-bottom"><div class="mode-block"><div class="eyebrow">01 / 选择球局</div><div class="mode-options"><button type="button" class="mode selected" data-mode="nine" aria-pressed="true"><span>01</span><strong>中式九球</strong></button><button type="button" class="mode" data-mode="eight" aria-pressed="false"><span>02</span><strong>中式八球</strong></button><button type="button" class="mode" data-mode="snooker" aria-pressed="false"><span>03</span><strong>斯诺克</strong></button></div></div><div class="start-block"><select id="opponent" aria-label="对战方式"><option value="">单人练习</option><option value="computer">人机对战</option></select><button type="button" id="history-open">历史球局</button><button type="button" class="guide-toggle" data-guide aria-pressed="true">辅助线：开</button><button type="button" id="start-game" class="primary">开始游戏</button></div></div>
+ </section>
+ <section id="game-hud" hidden>
+  <div class="game-top"><div><div class="eyebrow" id="mode-label"></div><strong id="target-label"></strong><span id="interaction-status"></span><div id="event-stage" hidden></div></div><div class="stats"><div id="match-score" hidden><small>你 / 电脑</small><b id="match-score-value">0 : 0</b></div><div class="clock-stat"><small>本局用时</small><b id="round-time">00:00.0</b></div><div id="penalty-stat" hidden><small>罚分</small><b id="penalty-points">0</b></div><div><small>得分</small><b id="score">0</b></div><div><small>杆数</small><b id="shots">0</b></div><div><small>犯规</small><b id="fouls">0</b></div></div></div>
+  <div id="aim-center"><span>+</span></div>
+  <aside id="placement-panel" hidden>
+   <div class="eyebrow">母球摆位 <b id="placement-zone"></b></div>
+   <canvas id="placement-map" width="280" height="152" aria-label="母球摆位图"></canvas>
+   <button type="button" id="confirm-placement" class="primary">确认摆位</button>
+  </aside>
+  <div class="bottom-hud">
+   <div class="spin-panel panel"><div class="panel-title">击打点位</div><div class="spin-content"><div id="spin-pad" role="img" aria-label="母球击打点"><span class="cross-h"></span><span class="cross-v"></span><i id="spin-dot"></i><i id="coach-spin" hidden></i></div><div class="spin-labels"><b id="spin-description">中心击球</b></div></div><div class="chalk-controls"><span id="chalk-status">皮头抓球 100%</span><button type="button" id="chalk-button">擦巧粉</button></div></div>
+   <div class="shot-tools"><div id="coach-advice" aria-live="polite" hidden></div><div class="coach-actions"><button type="button" id="coach-toggle" hidden>指导</button><button type="button" id="coach-apply" hidden>应用击球点</button><button type="button" id="coach-shoot" hidden>按指导出杆</button></div><div id="match-rules" hidden><span id="foul-warning"></span><div class="coach-actions"><button type="button" id="push-out" hidden>声明推杆</button><select id="free-ball" aria-label="指定自由球" hidden></select><button type="button" id="concede-frame" hidden>认输</button></div></div><div id="shot-message">观察球台</div><button type="button" class="guide-toggle" data-guide aria-pressed="true">辅助线：开</button><small id="options-status"></small></div>
+   <div class="power-panel panel"><div class="panel-title">出杆力度 <b id="power-value">0<span>%</span></b></div><div class="power-track" id="power-track"><i id="power-bar"></i><span></span><span></span><span></span></div><div class="power-meta"><span>轻推</span><span id="speed-label">0.0 m/s</span><span id="break-power-label">满力度</span></div></div>
+  </div>
+ </section>
+ <dialog id="event-dialog" aria-labelledby="event-title">
+  <h2 id="event-title">选择比赛</h2><p id="event-wallet"></p><p id="event-fx"></p>
+  <details id="official-calendar">
+   <summary>真实赛事赛程</summary>
+   <div class="calendar-toolbar"><span id="calendar-status" role="status"></span><button type="button" id="calendar-refresh">刷新赛程</button></div>
+   <p>这里展示官方赛程。可报名的游戏赛事列在下方。</p>
+   <div id="calendar-options"></div>
+  </details>
+  <div class="event-filter"><label for="event-year">赛事年份</label><select id="event-year"></select></div>
+  <div id="event-options"></div><p id="event-error" role="status"></p>
+  <div class="dialog-actions"><button type="button" id="event-bank">银行贷款</button><button type="button" id="event-back">返回</button></div>
+ </dialog>
+ <dialog id="bank" aria-labelledby="bank-title">
+  <h2 id="bank-title">银行贷款</h2><p>仅使用游戏资金。</p>
+  <div id="bank-totals"></div><p id="bank-terms"></p><p id="bank-status" role="status"></p>
+  <form id="bank-form">
+   <label for="bank-amount">金额（英镑）</label><input id="bank-amount" inputmode="decimal" autocomplete="off" placeholder="例如 1000.00" required>
+   <div class="dialog-actions"><button type="submit" id="bank-borrow" value="borrow">确认借款</button><button type="submit" id="bank-repay" value="repay">主动还款</button></div>
+  </form>
+  <div id="bank-loans"></div><details><summary>近期资金记录</summary><ul id="bank-ledger"></ul></details>
+  <div class="dialog-actions"><button type="button" id="bank-close">返回</button></div>
+ </dialog>
+ <dialog id="difficulty" aria-labelledby="difficulty-title">
+  <h2 id="difficulty-title">选择电脑难度</h2>
+  <div class="difficulty-options"></div>
+  <div class="dialog-actions"><button type="button" id="difficulty-cancel">返回</button></div>
+ </dialog>
+ <dialog id="rule-choice" aria-labelledby="rule-choice-title"><h2 id="rule-choice-title"></h2><div class="dialog-actions" id="rule-choice-actions"></div></dialog>
+ <dialog id="opening-break" aria-labelledby="opening-title">
+  <h2 id="opening-title"></h2><p id="opening-status" aria-live="polite"></p>
+  <div id="lag-control">
+   <canvas id="lag-table" width="744" height="390" tabindex="0" aria-label="比球球台，方向键调整，空格蓄力"></canvas>
+   <div id="lag-instructions"><p>鼠标瞄向右侧，按住左键向左拉杆，松手后双方同时出杆。也可用 ↑ ↓ 调整方向，按住空格蓄力。</p><label>比球力度 <meter id="lag-power" min="0" max="1" value="0"></meter></label></div>
+   <button type="button" id="lag-retry" hidden>重新比球</button>
+  </div>
+  <div id="opening-actions" class="dialog-actions"><button type="button" id="opening-self">我先开球</button><button type="button" id="opening-other">电脑先开球</button></div>
+ </dialog>
+ <dialog id="result" aria-labelledby="result-title">
+  <div class="eyebrow">ROUND COMPLETE</div><h2 id="result-title">本局结束</h2><p id="result-message"></p><p id="result-summary"></p><p id="result-payout" hidden></p>
+  <div class="dialog-actions"><button type="button" id="play-again" class="primary">再来一轮</button><button type="button" id="result-home">回到主页</button></div>
+ </dialog>
+ <dialog id="history" aria-labelledby="history-title">
+  <div class="dialog-heading"><h2 id="history-title">历史球局</h2><button type="button" id="history-close">回到主页</button></div><p>这里只保留未完成的球局，点击即可继续。已获胜或失败的球局不留存。</p>
+  <p id="history-empty"></p><div id="history-list"></div>
+ </dialog>
+ <div id="toast" role="status"></div>
+ <dialog id="settings" tabindex="-1" aria-labelledby="settings-title">
+  <div class="settings-heading"><button type="button" id="settings-close">返回球台</button><div class="eyebrow">CONTROLS &amp; SETTINGS</div><h2 id="settings-title">设置与操作说明</h2><p>球台已暂停。选中按键栏后按下新按键，立即生效并保存到本机。每个按键只能用于一项操作；返回上一级固定使用 Esc，不能修改。</p><p><span id="settings-close-hint">Esc 返回上一级</span> · Tab 切换条目 · Ctrl + Backspace 恢复全部默认按键</p><p id="binding-status" role="status" aria-live="polite">除 Esc 返回外，按键可自定义；冲突时会保留原设置。</p></div>
+  <button type="button" id="return-home">保存并回到主页</button><div id="binding-list"></div>
+  <div class="round-help"><b>球局、计时与存档</b><p>中八清完选定的一组球后，合法打进黑八即可获胜；黑八提前落袋或犯规落袋判负。斯诺克红球 1 分，黄、绿、棕、蓝、粉、黑分别为 2—7 分；红彩交替、彩球复位，最后按分值清彩，全部目标球清完即结束。最后黑球阶段犯规时，单人清台挑战判负。人机对战先给对手加分，再按比分判胜负，同分复位黑球。犯规罚分按规则应计给对手，单人练习单独记录，人机对战计入对手得分。</p><p>秒表统计实际游戏时间，暂停、后台和退出期间不计时。Esc 退出或返回主页会保存未完成的球局，可在“历史球局”继续；胜负已定则删除该局存档。继续时取消未出手的蓄力并回到观察视角，球的位置、运动、得分和用时保留。</p></div><div class="help-grid"><div><b>开始与姿态</b><p>先选择玩法，再开始球局、确认母球摆位，起身绕台选站位，最后俯身击球。只有姿态过渡完成后才能出杆。俯身锁定站位，球杆围绕母球击打位置左右各转 90°，合计半圈；超出这一半圈时先起身换站位。成功出杆后立即自动起身并平滑回到台边站立观察位置，不等球停。起身时如同站在台边、佩戴头部相机观察，保持正常眼高和稳定焦距，近处的球更清晰。画面允许只显示部分球台，通过沿四边和圆角走动查看各处；镜头朝向球台中心，不跟随母球，桌面与球桌保持不动。</p></div><div><b>鼠标操作</b><p>也可左右移动鼠标调杆，横移一个画面宽度对应半圈；按住精细调节键可慢速微调。左键按住向下拉杆、松开出杆，拉回起点取消。起身后右键拖动绕台，滚轮调观察高度。观察和俯身时都可点击或拖动母球剖面选击打点；摆位时立即切换到台边站立观察视角，可用绕台快捷键或右键拖动换角度、滚轮调观察高度，再在台面或摆位图中点击、拖动母球。</p></div><div><b>巧粉与加塞</b><p>桌边放有蓝色巧粉，可直接点击，也可点击“擦巧粉”按钮。出杆按力度和加塞消耗皮头抓球状态；不足时实际发力和旋转减弱。自动擦粉并放回原位后恢复，擦粉期间不能出杆或绕台；暂停会暂停动作，中途退出不提前恢复，续局保留原抓球状态。击打点上方为高杆、下方为低杆，左右为侧旋，击打点最多偏离球心约 0.75 倍球半径。每杆结束自动归中。</p></div><div><b>玩法与摆球权</b><p>开球时九球 / 中八母球在开球线后，斯诺克在 D 区。获得摆球权后，可反复调整，再确认位置；不能与球库、袋口或其他球重叠。普通击球间不能任意移动球。</p></div></div>
+  <div class="notice">Esc 统一返回上一级，不能改键：设置返回球台，历史球局和结算弹窗返回主页，对局保存并返回主页，主页关闭程序。也可使用设置快捷键或“返回球台”按钮关闭设置；点击按键栏之外可离开改键。不支持 Ctrl / Alt / Win 组合键；Tab 和部分系统功能键保留。切换窗口、打开设置或起身会取消未完成的蓄力。<br>当前为单人练习模拟：包含滑动 / 滚动摩擦、旋转、球间摩擦、库边反弹和袋口碰撞。参数未经实测标定；不模拟跳球、扎杆、杆身偏移及完整赛事裁判。引导线仅预测首次接触。画质使用原生分辨率和高精度光影。</div>
+ </dialog>
+ <div id="error" hidden><h2>球台暂时未能打开</h2><p id="error-text"></p><p>请退出并重新打开程序。</p></div>
+ <script type="module" src="app.js"></script>
+</body></html>

@@ -1,0 +1,12 @@
+node_modules/
+vendor/
+release/
+test-output/
+
+assets/audio/*.wav
+__pycache__/
+*.pyc
+*.zip
+*.lnk
+.env
+.env.*

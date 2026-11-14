@@ -1,0 +1,21 @@
+Recorded billiards sound effects (downloaded 2026-11-12)
+
+ball-original.mp3 / ball.wav:
+"billiard ball clack" by Za-Games
+https://freesound.org/people/Za-Games/sounds/539854/
+License: CC0 1.0 Universal
+https://creativecommons.org/publicdomain/zero/1.0/
+Source: the author's publicly available high-quality MP3 preview.
+
+pocket-original.mp3 / pocket.wav:
+"Pool Ball in pocket.wav" by jtroan
+https://freesound.org/people/jtroan/sounds/241373/
+License: Creative Commons Attribution 3.0 Unported (CC BY 3.0)
+https://creativecommons.org/licenses/by/3.0/
+Source: the author's publicly available high-quality MP3 preview.
+
+Adaptations by DesktopBilliards: mono conversion, 44.1 kHz resampling,
+low-frequency rumble removal, leading silence trimming, short endpoint fades,
+peak normalization; runtime gain, filtering and subtle pitch variation.
+Cue and cushion sounds are filtered variations of the ball recording.
+No endorsement by the original authors is implied.

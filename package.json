@@ -1,0 +1,26 @@
+{
+  "name": "desktop-billiards",
+  "version": "0.4.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build:web": "node scripts/build.mjs",
+    "build": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/build.ps1",
+    "test": "node --test tests/*.test.mjs",
+    "test:ui": "node tests/ui.mjs",
+    "test:observation": "node tests/observation.mjs",
+    "test:chalk": "node tests/chalk.mjs",
+    "test:keyboard": "node tests/keyboard.mjs",
+    "test:audio": "node tests/audio.mjs",
+    "test:session": "node tests/session.mjs",
+    "test:native-session": "node tests/native-session.mjs"
+  },
+  "dependencies": {
+    "three": "0.186.1"
+  },
+  "devDependencies": {
+    "rollup": "4.63.5",
+    "@rollup/plugin-node-resolve": "16.0.3",
+    "playwright": "1.64.0"
+  }
+}

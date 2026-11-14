@@ -1,0 +1,14 @@
+import {rollup} from 'rollup';
+import {nodeResolve} from '@rollup/plugin-node-resolve';
+import {mkdir,copyFile,writeFile,readFile,appendFile} from 'node:fs/promises';
+import {fileURLToPath} from 'node:url';
+const root=fileURLToPath(new URL('../',import.meta.url));
+process.chdir(root);await mkdir('release/web',{recursive:true});
+const bundle=await rollup({input:'src/app.js',plugins:[nodeResolve()],onwarn(warn){if(warn.code!=='CIRCULAR_DEPENDENCY')console.warn(warn.message);}});
+await bundle.write({file:'release/web/app.js',format:'es',sourcemap:false});await bundle.close();
+for(const f of ['index.html','style.css'])await copyFile('src/'+f,'release/web/'+f);
+await writeFile('release/THIRD-PARTY-NOTICES.txt','Three.js (MIT)\n\n'+await readFile('node_modules/three/LICENSE','utf8')+'\n\nMicrosoft WebView2 SDK: see WebView2-LICENSE.txt. Uses the installed Microsoft Edge WebView2 Runtime.\n');
+await appendFile('release/THIRD-PARTY-NOTICES.txt','\n\nBilliards sound recordings: see AUDIO-CREDITS.txt.\n'+await readFile('assets/audio/CREDITS.txt','utf8'));
+await copyFile('assets/audio/CREDITS.txt','release/AUDIO-CREDITS.txt');
+await writeFile('release/启动一个人的台球.cmd','@echo off\r\nstart "" "%~dp0DesktopBilliards.exe"\r\n');
+console.log('Web bundle built.');
