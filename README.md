@@ -12,9 +12,9 @@
 
 ## 下载
 
-- [Windows 10/11 x64](https://github.com/Barelooue/Desktop-Billiards/releases/download/v0.6.0/Desktop-Billiards-v0.6.0-Windows-x64.zip)
-- [Mac · Apple Silicon（M 系列）](https://github.com/Barelooue/Desktop-Billiards/releases/download/v0.6.0/Desktop-Billiards-v0.6.0-macOS-arm64.zip)
-- [Mac · Intel](https://github.com/Barelooue/Desktop-Billiards/releases/download/v0.6.0/Desktop-Billiards-v0.6.0-macOS-x64.zip)
+- [Windows 10/11 x64](https://github.com/Barelooue/Desktop-Billiards/releases/download/v0.7.0/Desktop-Billiards-v0.7.0-Windows-x64.zip)
+- [Mac · Apple Silicon（M 系列）](https://github.com/Barelooue/Desktop-Billiards/releases/download/v0.7.0/Desktop-Billiards-v0.7.0-macOS-arm64.zip)
+- [Mac · Intel](https://github.com/Barelooue/Desktop-Billiards/releases/download/v0.7.0/Desktop-Billiards-v0.7.0-macOS-x64.zip)
 
 点击对应版本下载 ZIP，解压后打开 Windows 的 `DesktopBilliards.exe` 或 Mac 的 `Desktop Billiards.app`。Mac 版要求 macOS 13 或更新版本，目前为未公证预览版。 [Mac 运行及构建说明](mac/README.md)
 

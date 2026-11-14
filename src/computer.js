@@ -367,6 +367,98 @@ function positionPressure(outcome){
  return visible===0?2.8+Math.min(1.5,.22/cover):1.6*(1-visible)+.35*Math.min(2,nearest)-Math.max(0,threat);
 }
 
+function snookerSafetyScore(outcome,opening=false,star=false){
+ const {trial,judge,result}=outcome;
+ if(result.foul||judge.done||judge.decision||result.legalPot)return null;
+ const cue=trial.balls[0],ids=new Set(judge.target(trial));
+ const targets=trial.balls.filter(ball=>ids.has(ball.id));
+ const {visible,cover,nearest}=escapeWindow(trial,targets);
+ const pots=potOptions(trial,targets,cue,true);
+ const threat=Math.max(0,...pots.map(pot=>pot.quality+.45));
+ const baulk=-trial.c.length/2+.737;
+ const backedIntoBaulk=clamp((baulk+.22-cue.x)/.40,0,1);
+ const cushionDistance=Math.min(trial.c.length/2-Math.abs(cue.x),trial.c.width/2-Math.abs(cue.y));
+ const tightCushion=clamp(1-cushionDistance/.14,0,1);
+ const openReds=opening?targets.filter(ball=>ball.x<.75||Math.abs(ball.y)>.24).length:0;
+ return 4+Math.min(3.4,nearest*2)+backedIntoBaulk*(opening?9:2.5)+tightCushion*(star?2:1.2)+
+  (visible===0?(star?12:10)+Math.min(2,.24/cover):3.5*(1-visible))-5*threat-.4*Math.min(8,pots.length)-openReds*1.6;
+}
+
+function* snookerSafetyOptions(contacts,star){
+ for(const shot of contacts.filter(shot=>shot.contactWidth).slice(0,star?14:10)){
+  for(const edge of [-1,1])for(const fraction of (star?[.98,.90,.77,.57,.36]:[.96,.81,.53])){
+   for(const speed of (star?[.70,1.05,1.5,2.05,2.65,3.25]:[.72,1.15,1.65,2.25,3])){
+    const angle=shot.angle+edge*fraction*shot.contactWidth;
+    yield {...shot,angle,speed};
+    if(star||fraction>=.81){
+     yield {...shot,angle,speed,top:-.34,side:edge*.28};
+     if(star&&fraction>=.77)yield {...shot,angle,speed,top:.36,side:-edge*.36};
+    }
+   }
+  }
+ }
+}
+
+function* safetyMargin(world,ref,shot,score,opening,star){
+ let total=0,legal=0;
+ const replies=[];
+ for(const [angle,speed] of [[-.0018,.982],[.0018,1.018],[-.0007,1.026],[.0007,.974]]){
+  const trial=simulate(world,ref,{...shot,angle:shot.angle+angle,speed:shot.speed*speed});
+  yield;
+  const safety=trial&&snookerSafetyScore(trial,opening,star);
+  if(safety!=null){total+=safety;legal++;if(star)replies.push(trial);}
+ }
+ let value=.54*score+.46*(total/4)-4*(4-legal);
+ if(star&&replies.length){
+  const {trial,judge}=replies[0];
+  const ids=new Set(judge.target(trial)),cue=trial.balls[0];
+  const targets=trial.balls.filter(ball=>ids.has(ball.id));
+  const visibility=escapeWindow(trial,targets).visible;
+  if(visibility===0){
+   const reply=Object.assign(new Referee(trial.mode),judge,{turn:1,scores:[judge.scores[1],judge.scores[0]],
+    foulStreak:[judge.foulStreak[1],judge.foulStreak[0]]});
+   const routes=contactOptions(trial,targets,cue).filter(route=>!route.contactWidth).sort((a,b)=>b.quality-a.quality);
+   let easyEscape=false;
+   search: for(const route of routes.slice(0,6))for(const offset of [0,-.012,.012]){
+    const escape=simulate(trial,reply,{...route,angle:route.angle+offset,speed:1.85});
+    yield;
+    if(escape&&!escape.result.foul){easyEscape=true;break search;}
+   }
+   if(!easyEscape)value+=2.6;
+  }
+ }
+ return value;
+}
+
+function* snookerOpening(world,ref){
+ const star=ref.difficulty==='star',baulk=-world.c.length/2+.737;
+ const candidates=[];
+ // Mirrored positions on the untouched rack have the same geometry.
+ for(const y of (star?[.14,.20,.25,.28]:[.14,.20,.25])){
+  const cue={x:baulk-.012,y};
+  if(!world.canPlaceCue(cue.x,cue.y))continue;
+  for(const offset of (star?[.065,.07,.085,.11,.145,.17,.22]:[.07,.11,.17,.21])){
+   const angle=Math.atan2(offset-cue.y,world.c.length*.275-cue.x);
+   for(const speed of (star?[3.1,3.5,3.75,4,4.25,4.5]:[3.1,3.5,4,4.5])){
+    for(const top of [-.4,0,.4]){
+     const shot={cue,angle,speed,top};
+     const outcome=simulate(world,ref,shot);
+     yield;
+     const score=outcome&&snookerSafetyScore(outcome,true,star);
+     if(score!=null&&outcome.trial.balls[0].x<baulk+.2)candidates.push({shot,score});
+    }
+   }
+  }
+ }
+ candidates.sort((a,b)=>b.score-a.score);
+ let choice=null,best=-Infinity;
+ for(const {shot,score} of candidates.slice(0,star?18:10)){
+  const value=yield* safetyMargin(world,ref,shot,score,true,star);
+  if(value>best){choice=shot;best=value;}
+ }
+ return choice;
+}
+
 function* shotMargin(world,ref,shot,original){
  let legal=0,kept=0;
  for(const [angle,speed] of [[-.0018,.986],[.0018,1.014],[-.00065,1.024],[.00065,.976]]){
@@ -491,6 +583,7 @@ function professionalOptions(pots,contacts,high){
 
 function* chooseProfessional(world,ref,targets,pots,contacts,fallback,fatigue){
  const high=eliteComputer(ref.difficulty),star=ref.difficulty==='star';
+ const snookerSafety=high&&world.mode==='snooker'&&!ref.coaching;
  const scored=[];
  const evaluate=shot=>{
   const outcome=simulate(world,ref,shot);
@@ -498,9 +591,11 @@ function* chooseProfessional(world,ref,targets,pots,contacts,fallback,fatigue){
   const style=star?shotStyle(shot,outcome):0;
   const effort=shotEffort(shot,outcome);
   const rank=score-effort+.05*shot.quality;
-  scored.push({shot,score,style,rank,shortlist:star?rank+style+Math.min(effort,5)*.55:rank});
+  const safety=snookerSafety&&outcome?snookerSafetyScore(outcome,false,star):null;
+  scored.push({shot,score,style,rank,safety,shortlist:safety??(star?rank+style+Math.min(effort,5)*.55:rank)});
  };
  for(const shot of professionalOptions(pots,contacts,high)){evaluate(shot);yield;}
+ if(snookerSafety)for(const shot of snookerSafetyOptions(contacts,star)){evaluate(shot);yield;}
  if(star)for(const shot of starOptions(world,targets,pots,contacts,fallback.cue)){evaluate(shot);yield;}
  if(high&&ref.canMake147(world)){
   const black=targets.find(ball=>ball.value===7);
@@ -552,7 +647,7 @@ function* chooseProfessional(world,ref,targets,pots,contacts,fallback,fatigue){
  let choice=scored[0].shot,best=-Infinity;
  const leaves=new Set();
  const shortlist=star?[...new Set([...[...attacks].sort((a,b)=>b.rank-a.rank).slice(0,4),...attacks.slice(0,75)])]:attacks.slice(0,high?65:26);
- for(const candidate of [...shortlist,...defenses.slice(0,star?14:high?8:3)]){
+ for(const candidate of [...shortlist,...defenses.slice(0,snookerSafety?(star?25:13):star?14:high?8:3)]){
   const attacking=candidate.score>=14;
   if(attacking&&leaves.size>=(star?9:high?5:3))continue;
   const outcome=simulate(world,ref,candidate.shot);
@@ -560,6 +655,12 @@ function* chooseProfessional(world,ref,targets,pots,contacts,fallback,fatigue){
   if(!outcome||outcome.result.foul)continue;
   let score=candidate.rank;
   if(!attacking){
+   if(candidate.safety!=null){
+    score=yield* safetyMargin(world,ref,candidate.shot,candidate.safety,false,star);
+    if(star)score+=candidate.style*.3;
+    if(score>best){choice=candidate.shot;best=score;}
+    continue;
+   }
    const margin=yield* shotMargin(world,ref,candidate.shot,outcome);
    score-=4*(1-margin.legal);
    if(high&&candidate.score>=0&&!outcome.judge.decision)score+=positionPressure(outcome)*margin.legal*(star?1.32:1);
@@ -572,7 +673,7 @@ function* chooseProfessional(world,ref,targets,pots,contacts,fallback,fatigue){
   if(leaves.has(key))continue;
   leaves.add(key);
   const margin=yield* shotMargin(world,ref,candidate.shot,outcome);
-  score-=(star?10:high?6:9)*(1-margin.kept)+(star?12:8)*(1-margin.legal);
+  score-=(snookerSafety?15:star?10:high?6:9)*(1-margin.kept)+(snookerSafety?15:star?12:8)*(1-margin.legal);
   let follow=0;
   if(!outcome.judge.done&&!outcome.judge.decision&&margin.kept>0){
    follow=yield* continuation(outcome.trial,outcome.judge,star?3:high?2:1);
@@ -663,6 +764,10 @@ export function* computerShotSearch(world,ref,rng=Math.random,fatigue=0){
  const targetIds=ref.target(world),targets=world.balls.filter(ball=>targetIds.includes(ball.id));
  const positions=ref.coaching?[world.balls[0]]:placementOptions(world,targets,ref.difficulty);
  if(!positions.length)return null;
+ if(world.mode==='snooker'&&ref.shots===0&&world.cuePlacementZone==='d'&&eliteComputer(ref.difficulty)&&!ref.coaching){
+  const choice=yield* snookerOpening(world,ref);
+  if(choice)return finalizeShot(world,ref,choice,rng,fatigue);
+ }
  if(isPoolBreak(world,ref)&&targets.length){
   const front=targets.reduce((a,b)=>a.x<b.x?a:b),cue=positions[0];
   const seats=(ref.coaching?[cue]:[cue,...[0,-.16,.16,-.30,.30].map(y=>({x:cue.x,y})),

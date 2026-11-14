@@ -12,9 +12,9 @@ Windows と macOS 向けの 3D ビリヤードゲームです。ポケットの�
 
 ## ダウンロード
 
-- [Windows 10/11 x64](https://github.com/Barelooue/Desktop-Billiards/releases/download/v0.6.0/Desktop-Billiards-v0.6.0-Windows-x64.zip)
-- [Mac · Apple Silicon（M シリーズ）](https://github.com/Barelooue/Desktop-Billiards/releases/download/v0.6.0/Desktop-Billiards-v0.6.0-macOS-arm64.zip)
-- [Mac · Intel](https://github.com/Barelooue/Desktop-Billiards/releases/download/v0.6.0/Desktop-Billiards-v0.6.0-macOS-x64.zip)
+- [Windows 10/11 x64](https://github.com/Barelooue/Desktop-Billiards/releases/download/v0.7.0/Desktop-Billiards-v0.7.0-Windows-x64.zip)
+- [Mac · Apple Silicon（M シリーズ）](https://github.com/Barelooue/Desktop-Billiards/releases/download/v0.7.0/Desktop-Billiards-v0.7.0-macOS-arm64.zip)
+- [Mac · Intel](https://github.com/Barelooue/Desktop-Billiards/releases/download/v0.7.0/Desktop-Billiards-v0.7.0-macOS-x64.zip)
 
 対応する ZIP を展開し、Windows では `DesktopBilliards.exe`、Mac では `Desktop Billiards.app` を開いてください。Mac 版は macOS 13 以降が必要な、公証前のプレビュー版です。 [Mac の起動とビルド手順](mac/README.md)
 

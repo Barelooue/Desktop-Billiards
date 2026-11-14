@@ -12,9 +12,9 @@ Un jeu de billard en 3D pour Windows et macOS. Entraînez-vous au jeu de la 9 su
 
 ## Téléchargement
 
-- [Windows 10/11 x64](https://github.com/Barelooue/Desktop-Billiards/releases/download/v0.6.0/Desktop-Billiards-v0.6.0-Windows-x64.zip)
-- [Mac · Apple Silicon (série M)](https://github.com/Barelooue/Desktop-Billiards/releases/download/v0.6.0/Desktop-Billiards-v0.6.0-macOS-arm64.zip)
-- [Mac · Intel](https://github.com/Barelooue/Desktop-Billiards/releases/download/v0.6.0/Desktop-Billiards-v0.6.0-macOS-x64.zip)
+- [Windows 10/11 x64](https://github.com/Barelooue/Desktop-Billiards/releases/download/v0.7.0/Desktop-Billiards-v0.7.0-Windows-x64.zip)
+- [Mac · Apple Silicon (série M)](https://github.com/Barelooue/Desktop-Billiards/releases/download/v0.7.0/Desktop-Billiards-v0.7.0-macOS-arm64.zip)
+- [Mac · Intel](https://github.com/Barelooue/Desktop-Billiards/releases/download/v0.7.0/Desktop-Billiards-v0.7.0-macOS-x64.zip)
 
 Téléchargez le ZIP correspondant, décompressez-le, puis ouvrez `DesktopBilliards.exe` sous Windows ou `Desktop Billiards.app` sur Mac. Les versions Mac nécessitent macOS 13 ou ultérieur et sont en préversion sans notarisation Apple. [Installation et compilation sur Mac](mac/README.md)
 

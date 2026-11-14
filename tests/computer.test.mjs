@@ -174,6 +174,20 @@ test('Computer level and turn survive a save, and the planner does not mutate th
  }
 });
 
+for(const difficulty of ['high','star'])test(`${difficulty} snooker opening returns the white to baulk`,()=>{
+ const world=new World('snooker'),ref=new Referee('snooker',difficulty);
+ ref.turn=1;
+ const shot=planComputerShot(world,ref,()=>.5);
+ assert.ok(world.placeCue(shot.placement.x,shot.placement.y));
+ ref.begin(world);world.strike(shot.angle,shot.speed,shot.side,shot.top);
+ while(world.running)world.step(1/240);
+ const result=ref.finish(world);
+ assert.equal(result.foul,false);
+ assert.equal(result.legalPot,false);
+ assert.equal(ref.turn,0);
+ assert.ok(world.balls[0].x< -world.c.length/2+.737);
+});
+
 for(const difficulty of ['high','star'])test(`${difficulty} snooker player hides every direct line to the red and can escape off a cushion`,()=>{
  const world=new World('snooker'),ref=new Referee('snooker',difficulty);
  const positions=new Map([

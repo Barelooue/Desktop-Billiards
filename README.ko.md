@@ -12,9 +12,9 @@ Windows와 macOS용 3D 당구 게임입니다. 포켓이 좁은 테이블에서 
 
 ## 다운로드
 
-- [Windows 10/11 x64](https://github.com/Barelooue/Desktop-Billiards/releases/download/v0.6.0/Desktop-Billiards-v0.6.0-Windows-x64.zip)
-- [Mac · Apple Silicon(M 시리즈)](https://github.com/Barelooue/Desktop-Billiards/releases/download/v0.6.0/Desktop-Billiards-v0.6.0-macOS-arm64.zip)
-- [Mac · Intel](https://github.com/Barelooue/Desktop-Billiards/releases/download/v0.6.0/Desktop-Billiards-v0.6.0-macOS-x64.zip)
+- [Windows 10/11 x64](https://github.com/Barelooue/Desktop-Billiards/releases/download/v0.7.0/Desktop-Billiards-v0.7.0-Windows-x64.zip)
+- [Mac · Apple Silicon(M 시리즈)](https://github.com/Barelooue/Desktop-Billiards/releases/download/v0.7.0/Desktop-Billiards-v0.7.0-macOS-arm64.zip)
+- [Mac · Intel](https://github.com/Barelooue/Desktop-Billiards/releases/download/v0.7.0/Desktop-Billiards-v0.7.0-macOS-x64.zip)
 
 해당 ZIP 파일을 풀고 Windows에서는 `DesktopBilliards.exe`, Mac에서는 `Desktop Billiards.app`을 실행하세요. Mac 버전은 macOS 13 이상이 필요하며 Apple 공증을 받지 않은 미리 보기입니다. [Mac 실행 및 빌드 안내](mac/README.md)
 
