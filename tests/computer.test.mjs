@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import {World,rack} from '../src/physics.js';
 import {BREAK_MAX_SPEED} from '../src/shot-controls.js';
 import {Referee} from '../src/rules.js';
-import {computerNeedsChalk,computerShouldConcede,escapeWindow,planComputerShot,practiceShotSearch} from '../src/computer.js';
+import {computerNeedsChalk,computerPerspective,computerShouldConcede,escapeWindow,planComputerShot,practiceShotSearch} from '../src/computer.js';
 import {captureRound,restoreRound} from '../src/session.js';
 
 function finish(world,ref,firstHit,pots=[],rail=false){
@@ -14,6 +14,24 @@ function finish(world,ref,firstHit,pots=[],rail=false){
  for(const id of pots)world.pot(world.balls.find(ball=>ball.id===id));
  return ref.finish(world);
 }
+
+test('The left computer evaluates a legal finish from its own perspective',()=>{
+ const world=new World('nine'),ref=new Referee('nine','high');
+ for(const ball of world.balls)if(ball.id&&ball.id!==9)ball.potted=true;
+ Object.assign(world.balls[0],{x:.15,y:0});
+ Object.assign(world.balls.find(ball=>ball.id===9),{x:0,y:world.c.width/2-.12});
+ world.cuePlacementZone=null;
+ Object.assign(ref,{turn:0,shots:4,scores:[5,2],foulStreak:[2,0],leftComputerGrip:.91});
+ const planner=computerPerspective(ref,0);
+ assert.deepEqual(planner.scores,[2,5]);
+ assert.deepEqual(planner.foulStreak,[0,2]);
+ assert.equal(planner.computerGrip,.91);
+ const shot=planComputerShot(world,planner,()=>.5);
+ ref.begin(world);world.strike(shot.angle,shot.speed,shot.side,shot.top);
+ while(world.running)world.step(1/240);
+ assert.equal(ref.finish(world).foul,false);
+ assert.equal(ref.outcome,'win');
+});
 
 test('All computer levels default to a legal full-power pool break',()=>{
  for(const mode of ['nine','eight'])for(const level of ['low','medium','high','star']){

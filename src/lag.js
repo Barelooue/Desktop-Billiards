@@ -10,14 +10,32 @@ export function makeLagWorld(mode){
  return world;
 }
 
-export function strikeLag(world,power,angle,difficulty,rng=Math.random){
+function lagStroke(difficulty,rng){
  const [base,speedError,aimError]=SKILL[difficulty];
- const pace=base+(rng()-.5)*speedError;
- const aim=(rng()-.5)*aimError;
+ return [base+(rng()-.5)*speedError,(rng()-.5)*aimError];
+}
+
+export function strikeLag(world,power,angle,difficulty,rng=Math.random){
+ const [pace,aim]=lagStroke(difficulty,rng);
  if(!world.strike(angle,lagSpeed(power)))return false;
  // Start the opponent's centre-ball stroke on the same physics step.
  Object.assign(world.balls[1],{vx:pace*Math.cos(aim),vy:pace*Math.sin(aim)});
  return true;
+}
+
+export function computerLagWinner(mode,rng=Math.random){
+ for(let attempt=0;attempt<5;attempt++){
+  const world=makeLagWorld(mode),crossed=[false,false];
+  const [speed,angle]=lagStroke('high',rng);
+  strikeLag(world,(speed-.4)/4,angle,'high',rng);
+  while(world.running){
+   world.step(1/240);
+   world.balls.forEach((ball,i)=>{crossed[i]||=i===0?ball.y<=0:ball.y>=0;});
+  }
+  const {chooser}=lagResult(world,crossed);
+  if(chooser!==null)return chooser;
+ }
+ return rng()<.5?0:1;
 }
 
 export function lagResult(world,crossed){

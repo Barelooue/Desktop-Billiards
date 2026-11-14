@@ -260,9 +260,15 @@ export class BilliardScene{
   this.updateCamera(dt);const ready=this.phase==='play'&&this.stance&&!this.world.running&&!ballInHand;
   this.cue.visible=ready||!!computerShot;this.guides.visible=ready&&guide&&!this.coachOverhead;
   if(computerShot){
-   const {angle,pull,top=0,side=0}=computerShot;
+   const {angle,pull,top=0,side=0,placement}=computerShot;
+   const {x,y}=placement??b;
+   if(placement){
+    const {mesh,shadow}=this.meshes.get(0);
+    mesh.visible=shadow.visible=true;
+    mesh.position.set(x,b.r,y);shadow.position.set(x,.0004,y);
+   }
    const dx=Math.cos(angle),dy=Math.sin(angle),tilt=top<-.25?-.12:-.025;
-   this.cue.position.set(b.x-dx*pull-dy*side*b.r,b.r+top*b.r+.045*Math.sin(tilt),b.y-dy*pull+dx*side*b.r);
+   this.cue.position.set(x-dx*pull-dy*side*b.r,b.r+top*b.r+.045*Math.sin(tilt),y-dy*pull+dx*side*b.r);
    this.cue.rotation.set(0,-angle,tilt);
   }else if(ready){
    const dx=Math.cos(this.aim),dy=Math.sin(this.aim),pull=power*.27;

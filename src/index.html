@@ -15,10 +15,10 @@
  <section id="welcome">
   <div class="wallet-home"><span id="home-wallet"></span><button type="button" id="bank-open">银行贷款</button></div>
   <div class="intro"><div class="eyebrow">YOUR DESKTOP. YOUR TABLE.</div><h1>让桌面，<br>成为你的球场。</h1><p>一张球桌，一刻专注。<br>给忙碌留一杆的空隙。</p></div>
-  <div class="setup-bottom"><div class="mode-block"><div class="eyebrow">01 / 选择球局</div><div class="mode-options"><button type="button" class="mode selected" data-mode="nine" aria-pressed="true"><span>01</span><strong>中式九球</strong></button><button type="button" class="mode" data-mode="eight" aria-pressed="false"><span>02</span><strong>中式八球</strong></button><button type="button" class="mode" data-mode="snooker" aria-pressed="false"><span>03</span><strong>斯诺克</strong></button></div></div><div class="start-block"><select id="opponent" aria-label="对战方式"><option value="">单人练习</option><option value="computer">人机对战</option></select><button type="button" id="history-open">历史球局</button><button type="button" class="guide-toggle" data-guide aria-pressed="true">辅助线：开</button><button type="button" id="start-game" class="primary">开始游戏</button></div></div>
+  <div class="setup-bottom"><div class="mode-block"><div class="eyebrow">01 / 选择球局</div><div class="mode-options"><button type="button" class="mode selected" data-mode="nine" aria-pressed="true"><span>01</span><strong>中式九球</strong></button><button type="button" class="mode" data-mode="eight" aria-pressed="false"><span>02</span><strong>中式八球</strong></button><button type="button" class="mode" data-mode="snooker" aria-pressed="false"><span>03</span><strong>斯诺克</strong></button></div></div><div class="start-block"><select id="opponent" aria-label="对战方式"><option value="">单人练习</option><option value="computer">人机对战</option><option value="showcase">高手如云</option></select><button type="button" id="history-open">历史球局</button><button type="button" class="guide-toggle" data-guide aria-pressed="true">辅助线：开</button><button type="button" id="start-game" class="primary">开始游戏</button></div></div>
  </section>
  <section id="game-hud" hidden>
-  <div class="game-top"><div><div class="eyebrow" id="mode-label"></div><strong id="target-label"></strong><span id="interaction-status"></span><div id="event-stage" hidden></div></div><div class="stats"><div id="match-score" hidden><small>你 / 电脑</small><b id="match-score-value">0 : 0</b></div><div class="clock-stat"><small>本局用时</small><b id="round-time">00:00.0</b></div><div id="penalty-stat" hidden><small>罚分</small><b id="penalty-points">0</b></div><div><small>得分</small><b id="score">0</b></div><div><small>杆数</small><b id="shots">0</b></div><div><small>犯规</small><b id="fouls">0</b></div></div></div>
+  <div class="game-top"><div><div class="eyebrow" id="mode-label"></div><strong id="target-label"></strong><span id="interaction-status"></span><div id="event-stage" hidden></div><button type="button" id="take-over" hidden>接管比赛</button></div><div class="stats"><div id="match-score" hidden><small>你 / 电脑</small><b id="match-score-value">0 : 0</b></div><div class="clock-stat"><small>本局用时</small><b id="round-time">00:00.0</b></div><div id="penalty-stat" hidden><small>罚分</small><b id="penalty-points">0</b></div><div><small>得分</small><b id="score">0</b></div><div><small>杆数</small><b id="shots">0</b></div><div><small>犯规</small><b id="fouls">0</b></div></div></div>
   <div id="aim-center"><span>+</span></div>
   <aside id="placement-panel" hidden>
    <div class="eyebrow">母球摆位 <b id="placement-zone"></b></div>
@@ -58,7 +58,16 @@
   <div class="difficulty-options"></div>
   <div class="dialog-actions"><button type="button" id="difficulty-cancel">返回</button></div>
  </dialog>
- <dialog id="rule-choice" aria-labelledby="rule-choice-title"><h2 id="rule-choice-title"></h2><div class="dialog-actions" id="rule-choice-actions"></div></dialog>
+ <dialog id="take-over-dialog" aria-labelledby="take-over-title">
+  <h2 id="take-over-title">接管比赛</h2>
+  <p id="take-over-status" aria-live="polite"></p>
+  <div class="dialog-actions">
+   <button type="button" data-take-side="0">接管甲方</button>
+   <button type="button" data-take-side="1">接管乙方</button>
+   <button type="button" id="take-over-cancel">继续观赛</button>
+  </div>
+ </dialog>
+ <dialog id="rule-choice" aria-labelledby="rule-choice-title"><h2 id="rule-choice-title"></h2><div class="dialog-actions" id="rule-choice-actions"></div><button type="button" id="hand-back-rule" hidden>交还电脑</button></dialog>
  <dialog id="opening-break" aria-labelledby="opening-title">
   <h2 id="opening-title"></h2><p id="opening-status" aria-live="polite"></p>
   <div id="lag-control">
@@ -70,7 +79,7 @@
  </dialog>
  <dialog id="result" aria-labelledby="result-title">
   <div class="eyebrow">ROUND COMPLETE</div><h2 id="result-title">本局结束</h2><p id="result-message"></p><p id="result-summary"></p><p id="result-payout" hidden></p>
-  <div class="dialog-actions"><button type="button" id="play-again" class="primary">再来一轮</button><button type="button" id="result-home">回到主页</button></div>
+  <div class="dialog-actions"><button type="button" id="play-again" class="primary">再来一轮</button><button type="button" id="take-over-result" hidden>接管比赛</button><button type="button" id="result-home">回到主页</button></div>
  </dialog>
  <dialog id="history" aria-labelledby="history-title">
   <div class="dialog-heading"><h2 id="history-title">历史球局</h2><button type="button" id="history-close">回到主页</button></div><p>这里只保留未完成的球局，点击即可继续。已获胜或失败的球局不留存。</p>
@@ -79,7 +88,11 @@
  <div id="toast" role="status"></div>
  <dialog id="settings" tabindex="-1" aria-labelledby="settings-title">
   <div class="settings-heading"><button type="button" id="settings-close">返回球台</button><div class="eyebrow">CONTROLS &amp; SETTINGS</div><h2 id="settings-title">设置与操作说明</h2><p>球台已暂停。选中按键栏后按下新按键，立即生效并保存到本机。每个按键只能用于一项操作；返回上一级固定使用 Esc，不能修改。</p><p><span id="settings-close-hint">Esc 返回上一级</span> · Tab 切换条目 · Ctrl + Backspace 恢复全部默认按键</p><p id="binding-status" role="status" aria-live="polite">除 Esc 返回外，按键可自定义；冲突时会保留原设置。</p></div>
-  <button type="button" id="return-home">保存并回到主页</button><div id="binding-list"></div>
+  <div class="settings-window-actions">
+   <button type="button" id="return-home">保存并回到主页</button>
+   <button type="button" id="floating-window" aria-pressed="false" hidden>开启悬浮窗</button>
+  </div>
+  <div id="binding-list"></div>
   <div class="round-help"><b>球局、计时与存档</b><p>中八清完选定的一组球后，合法打进黑八即可获胜；黑八提前落袋或犯规落袋判负。斯诺克红球 1 分，黄、绿、棕、蓝、粉、黑分别为 2—7 分；红彩交替、彩球复位，最后按分值清彩，全部目标球清完即结束。最后黑球阶段犯规时，单人清台挑战判负。人机对战先给对手加分，再按比分判胜负，同分复位黑球。犯规罚分按规则应计给对手，单人练习单独记录，人机对战计入对手得分。</p><p>秒表统计实际游戏时间，暂停、后台和退出期间不计时。Esc 退出或返回主页会保存未完成的球局，可在“历史球局”继续；胜负已定则删除该局存档。继续时取消未出手的蓄力并回到观察视角，球的位置、运动、得分和用时保留。</p></div><div class="help-grid"><div><b>开始与姿态</b><p>先选择玩法，再开始球局、确认母球摆位，起身绕台选站位，最后俯身击球。只有姿态过渡完成后才能出杆。俯身锁定站位，球杆围绕母球击打位置左右各转 90°，合计半圈；超出这一半圈时先起身换站位。成功出杆后立即自动起身并平滑回到台边站立观察位置，不等球停。起身时如同站在台边、佩戴头部相机观察，保持正常眼高和稳定焦距，近处的球更清晰。画面允许只显示部分球台，通过沿四边和圆角走动查看各处；镜头朝向球台中心，不跟随母球，桌面与球桌保持不动。</p></div><div><b>鼠标操作</b><p>也可左右移动鼠标调杆，横移一个画面宽度对应半圈；按住精细调节键可慢速微调。左键按住向下拉杆、松开出杆，拉回起点取消。起身后右键拖动绕台，滚轮调观察高度。观察和俯身时都可点击或拖动母球剖面选击打点；摆位时立即切换到台边站立观察视角，可用绕台快捷键或右键拖动换角度、滚轮调观察高度，再在台面或摆位图中点击、拖动母球。</p></div><div><b>巧粉与加塞</b><p>桌边放有蓝色巧粉，可直接点击，也可点击“擦巧粉”按钮。出杆按力度和加塞消耗皮头抓球状态；不足时实际发力和旋转减弱。自动擦粉并放回原位后恢复，擦粉期间不能出杆或绕台；暂停会暂停动作，中途退出不提前恢复，续局保留原抓球状态。击打点上方为高杆、下方为低杆，左右为侧旋，击打点最多偏离球心约 0.75 倍球半径。每杆结束自动归中。</p></div><div><b>玩法与摆球权</b><p>开球时九球 / 中八母球在开球线后，斯诺克在 D 区。获得摆球权后，可反复调整，再确认位置；不能与球库、袋口或其他球重叠。普通击球间不能任意移动球。</p></div></div>
   <div class="notice">Esc 统一返回上一级，不能改键：设置返回球台，历史球局和结算弹窗返回主页，对局保存并返回主页，主页关闭程序。也可使用设置快捷键或“返回球台”按钮关闭设置；点击按键栏之外可离开改键。不支持 Ctrl / Alt / Win 组合键；Tab 和部分系统功能键保留。切换窗口、打开设置或起身会取消未完成的蓄力。<br>当前为单人练习模拟：包含滑动 / 滚动摩擦、旋转、球间摩擦、库边反弹和袋口碰撞。参数未经实测标定；不模拟跳球、扎杆、杆身偏移及完整赛事裁判。引导线仅预测首次接触。画质使用原生分辨率和高精度光影。</div>
  </dialog>

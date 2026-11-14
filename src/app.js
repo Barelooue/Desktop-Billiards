@@ -10,11 +10,12 @@ import {OBSERVATION_HEIGHT} from './observation.js';
 import {HistoryStore,RoundClock,formatTime,captureRound,restoreRound,ROUND_RETENTION_MS} from './session.js';
 import {cueResponse} from './chalk.js';
 import {playerShotPower,playerShotSpeed,PLAYER_SPIN_LIMIT,BREAK_MAX_POWER,isPoolBreak} from './shot-controls.js';
-import {DIFFICULTIES,eliteComputer,computerNeedsChalk,computerShotSearch,computerShouldConcede,practiceShotSearch} from './computer.js';
+import {DIFFICULTIES,eliteComputer,computerPerspective,computerNeedsChalk,computerShotSearch,computerShouldConcede,practiceShotSearch} from './computer.js';
 import {freshComputerFatigue,computerFatigueLevel,recordComputerStroke,nextFrameFatigue} from './computer-fatigue.js';
 import {EVENTS,eventPrize,stageName,SNOOKER_BREAK_PRIZES,snookerBreakPrize} from './events.js';
 import {openingStage,raceTo,raceLabel,matchLabelText,recordFrame,openingBreak,breakOrder} from './match-format.js';
 import {LagView} from './lag-view.js';
+import {computerLagWinner} from './lag.js';
 import {OfficialCalendar,calendarStatus,calendarSource} from './calendar.js';
 import {LEGACY_QUOTE,ExchangeRates,money,toPence} from './currency.js';
 import {BANK,borrow,dateLabel,debt,loanRestriction,record,repay,settlePrize} from './economy.js';
@@ -22,6 +23,7 @@ const $=id=>document.getElementById(id);
 let view,world,ref,mode='nine',started=false,paused=false,ballInHand=false,guide=true,spin={x:0,y:0},power=0,drag=null,keys=new Set(),accumulator=0,last=performance.now(),lastPaint=0,dirty=true,eventCursor=0;
 const audio=new BilliardAudio();
 let desktop=window.DESKTOP_SOURCE||{wallpaper:null};
+let floatingWindow=window.BILLIARDS_WINDOW_MODE===true;
 let toastTimer;
 let historyExpiryTimer;
 let placementUI,settingsUI,lastPointerX=null,spinDrag=false,soundEnabled=true;
@@ -31,16 +33,28 @@ const history=new HistoryStore(storage),roundClock=new RoundClock();
 const exchange=new ExchangeRates(storage);
 const officialCalendar=new OfficialCalendar(storage);
 let roundId=null,createdAt=0,lastCheckpoint=0,lastClockText='';
-let tournament=null,pendingDifficulty=null,roundPayout=null;
+let tournament=null,pendingDifficulty=null,pendingShowcase=false,roundPayout=null,nextShowcaseFrame=0,showcaseNextRound=null;
 let computerTime=0,computerPlan=null,computerSearch=null;
 let coachAdvice=null,coachSearch=null;
 const lagView=new LagView($('lag-table'),$('lag-power'),finishLag);
-const computerTurn=()=>ref?.turn===1;
+const humanSide=entry=>entry?.showcase?entry.controlledSide:0;
+const computerSide=side=>side!==humanSide(tournament);
+const computerTurn=()=>!!ref?.difficulty&&computerSide(ref.turn);
+const sideNames=entry=>entry?.showcase?['甲方','乙方'].map((name,side)=>side===entry.controlledSide?name+'（你）':name):['你','电脑'];
+const canTakeOver=()=>started&&tournament?.showcase&&tournament.controlledSide===null&&(!ref.done||roundPayout?.advance);
+const canHandBack=()=>started&&tournament?.showcase&&tournament.controlledSide!==null&&(!ref.done||roundPayout?.advance);
 const breakBoostAvailable=()=>started&&!computerTurn()&&!tournament?.opening&&
  !ref.done&&!ref.decision&&!world.running&&isPoolBreak(world,ref);
 const powerLimit=()=>breakBoostAvailable()?BREAK_MAX_POWER:1;
 const held=action=>keys.has(action);
 function refreshBindingHint(){$('settings-hint').textContent=keyLabel(bindings.bindings.settings)+' · 设置';}
+function updateWindowMode(){
+ const toggle=$('floating-window');
+ toggle.hidden=typeof window.BILLIARDS_WINDOW_MODE!=='boolean';
+ toggle.textContent=floatingWindow?'返回全屏':'开启悬浮窗';
+ toggle.setAttribute('aria-pressed',String(floatingWindow));
+ document.body.classList.toggle('floating-window',floatingWindow);
+}
 
 function cancelAction(){keys.clear();heldCodes.clear();if(drag?.pointerId!==undefined&&$('scene').hasPointerCapture(drag.pointerId))$('scene').releasePointerCapture(drag.pointerId);drag=null;power=0;lastPointerX=null;spinDrag=false;if(placementUI)placementUI.dragging=false;updatePower();}
 function canStrike(){const b=world.balls[0];return started&&!computerTurn()&&!ref.decision&&!paused&&!ballInHand&&!world.running&&!view.chalkMotion&&!ref.done&&!b.potted&&(!world.cuePlacementZone||world.canPlaceCue(b.x,b.y));}
@@ -63,10 +77,11 @@ function refreshInteraction(){
  $('coach-apply').disabled=!canSetSpin();
  $('coach-shoot').disabled=!coachAdvice||!canStrike();
  const posture=ballInHand?'母球摆位':view.stance?'俯身击球 · 站位锁定':'起身观察';
- $('interaction-status').textContent=ref.difficulty?(computerTurn()?'电脑回合':'你的回合 · '+posture):posture;
+ refreshControlButtons();
+ $('interaction-status').textContent=ref.difficulty?(computerTurn()?(tournament?.showcase?sideNames(tournament)[ref.turn]:'电脑')+'回合':'你的回合 · '+posture):posture;
  $('shot-message').textContent=ref.done?'本局结束':view.chalkMotion?(computerTurn()?'电脑正在擦巧粉…':'正在擦巧粉…'):world.running?'球在运动':computerTurn()?(computerPlan?'电脑瞄准中':'电脑选球中'):ballInHand?'等待确认摆位':view.stance?'准备出杆':'观察球台';
  $('chalk-button').disabled=!canChalk();$('chalk-button').textContent=view.chalkMotion?'擦粉中…':'擦巧粉';
- const grip=computerTurn()?ref.computerGrip:world.tipCondition;
+ const grip=computerTurn()?(ref.turn===0?ref.leftComputerGrip:ref.computerGrip):world.tipCondition;
  $('chalk-status').textContent=`${computerTurn()?'电脑':''}皮头抓球 ${Math.round(grip*100)}%${!computerTurn()&&grip<.35?' · 建议擦粉':''}`;
  $('chalk-status').classList.toggle('low',grip<.35);
  refreshMatchRules();
@@ -84,9 +99,9 @@ window.addEventListener('unhandledrejection',event=>fail(event.reason));
 function setDesktop(data){desktop=data;if(data.wallpaper)$('backdrop').style.backgroundImage=`url("${data.wallpaper}")`;$('source-status').textContent='标准台球 · 本地运行';if(!started)setup(mode);}
 function setup(key){
  if(started&&!saveRound())return false;
- for(const id of ['settings','result','history','rule-choice','opening-break','difficulty','event-dialog','bank'])if($(id).open)$(id).close();
+ for(const id of ['settings','result','take-over-dialog','history','rule-choice','opening-break','difficulty','event-dialog','bank'])if($(id).open)$(id).close();
  paused=false;roundClock.reset();roundId=null;createdAt=0;updateClock();
- tournament=null;roundPayout=null;pendingDifficulty=null;refreshWallet();
+ tournament=null;roundPayout=null;nextShowcaseFrame=0;showcaseNextRound=null;pendingDifficulty=null;pendingShowcase=false;refreshWallet();
  audio.stop();cancelAction();mode=key;started=false;ballInHand=false;spin={x:0,y:0};world=new World(mode);ref=new Referee(mode);
  computerTime=0;computerPlan=null;computerSearch=null;
  clearCoach();
@@ -110,6 +125,12 @@ const ruleChoices={
 function presentOpeningBreak(){
  const opening=tournament?.opening;
  if(!opening)return;
+ if(tournament.showcase){
+  const breaker=opening.chooser??computerLagWinner(mode);
+  if(completeOpeningBreak(breaker))toast(`${sideNames(tournament)[breaker]}先开球`);
+  else toast('开球权尚未保存，请返回主页后重试');
+  return;
+ }
  roundClock.pause();updateClock();
  const dialog=$('opening-break'),lag=opening.kind==='lag';
  $('opening-title').textContent=lag?'比球决定首局开球':'抽签决定首局先手';
@@ -126,22 +147,23 @@ function presentOpeningBreak(){
  if(!dialog.open){dialog.showModal();if(lag&&opening.chooser===undefined)$('lag-table').focus();}
 }
 function completeOpeningBreak(breaker){
- if(!tournament?.opening||!$('opening-break').open)return;
+ if(!tournament?.opening||(!tournament.showcase&&!$('opening-break').open))return false;
  const previous=tournament;
  tournament={...tournament,breaker};delete tournament.opening;
  const oldTurn=ref.turn;
  ref.turn=breaker;
- ballInHand=breaker===0;
+ ballInHand=!computerSide(breaker);
  if(!saveRound()){
   tournament=previous;ref.turn=oldTurn;ballInHand=false;
   $('opening-status').textContent='开球权尚未保存，请重试。';
-  return;
+  return false;
  }
  $('opening-break').close();
  roundClock.start();
- if(breaker===0)beginPlacement();
+ if(!computerSide(breaker))beginPlacement();
  updateStats();refreshInteraction();dirty=true;
  $('scene').focus({preventScroll:true});
+ return true;
 }
 function refreshMatchRules(){
  const available=started&&!!ref.difficulty&&!world.running&&!ref.done;
@@ -167,16 +189,21 @@ function refreshMatchRules(){
   }
   select.value=nominated??'';
  }else if(select.hidden&&select.options.length)select.replaceChildren();
- const concede=available&&!tournament?.opening&&ref.canConcede(world,0);
+ const side=humanSide(tournament);
+ const concede=available&&side!==null&&!tournament?.opening&&ref.canConcede(world,side);
  $('concede-frame').hidden=!concede;
- $('concede-frame').textContent=concede?`认输本局 · 已超分 ${ref.scores[1]-ref.scores[0]-pointsRemaining(world,ref.phase)}`:'认输本局';
+ $('concede-frame').textContent=concede?`认输本局 · 已超分 ${ref.scores[1-side]-ref.scores[side]-pointsRemaining(world,ref.phase)}`:'认输本局';
 }
 
 function maybeComputerConcedes(){
  if(tournament?.opening)return false;
- const message=ref.awardFinalBlackFrame(world)??(computerShouldConcede(world,ref)?ref.concede(world,1):null);
- if(!message)return false;
- showResult(message);
+ const message=ref.awardFinalBlackFrame(world);
+ if(message){showResult(message);return true;}
+ const side=[0,1].find(side=>computerSide(side)&&computerShouldConcede(world,computerPerspective(ref,side)));
+ if(side===undefined)return false;
+ const concession=ref.concede(world,side);
+ if(!concession)return false;
+ showResult(tournament?.showcase?`${sideNames(tournament)[side]}认输`:concession);
  return true;
 }
 function applyRuleChoice(action){
@@ -196,7 +223,7 @@ function applyRuleChoice(action){
 }
 function presentRuleChoice(){
  const {kind,chooser}=ref.decision;
- if(chooser===1){
+ if(computerSide(chooser)){
   const action={
    'nine-short-break':'self','push-out':'self','black-tiebreak':'self','break-foul':'accept',
    'missed-break':'break-self','short-break':'accept','black-break':'accept',
@@ -216,10 +243,12 @@ function presentRuleChoice(){
  if(!$('rule-choice').open)$('rule-choice').showModal();
 }
 function updateStats(){
- $('mode-label').textContent=MODES[mode].en+' / '+matchLabel(ref.difficulty);
+ $('return-home').textContent=tournament?.showcase?'结束观赛并回到主页':'保存并回到主页';
+ $('mode-label').textContent=MODES[mode].en+' / '+(tournament?.showcase?'高手如云 · 双高档':matchLabel(ref.difficulty));
  $('target-label').textContent=ref.label(world);
  $('match-score').hidden=!ref.difficulty;
  $('match-score-value').textContent=ref.scores?.join(' : ')??'';
+ $('match-score').querySelector('small').textContent=sideNames(tournament).join(' / ');
  $('score').parentElement.hidden=!!ref.difficulty;
  $('score').textContent=ref.score;$('shots').textContent=ref.shots;$('fouls').textContent=ref.fouls;
  $('penalty-stat').hidden=mode!=='snooker'||!!ref.difficulty;$('penalty-points').textContent=ref.penaltyPoints;
@@ -237,11 +266,12 @@ function updateScoreboard(score=tournament?.matchScore??[0,0]){
  const {key,stage}=tournament;
  $('scoreboard-player').textContent=score[0];
  $('scoreboard-computer').textContent=score[1];
+ board.querySelectorAll('.scoreboard-side span').forEach((label,i)=>{label.textContent=sideNames(tournament)[i];});
  $('scoreboard-race').textContent=raceLabel(mode,raceTo(mode,key,EVENTS[mode][key],stage));
 }
 function tournamentScore(mode,entry,score=entry.matchScore??[0,0]){
  const details=EVENTS[mode][entry.key];
- return matchLabelText(mode,raceTo(mode,entry.key,details,entry.stage),score);
+ return matchLabelText(mode,raceTo(mode,entry.key,details,entry.stage),score,sideNames(entry));
 }
 function updateClock(){const text=formatTime(roundClock.value());if(text!==lastClockText){$('round-time').textContent=text;lastClockText=text;}}
 function roundSnapshot(overrides={}){
@@ -250,6 +280,7 @@ function roundSnapshot(overrides={}){
 function saveRound(){
  if(!started||!roundId)return true;
  if(ref.done&&tournament)return finishTournament();
+ if(tournament?.showcase)return true;
  const ok=ref.done?history.remove(roundId):history.save(roundSnapshot());
  if(!ok){toast(history.error);if($('settings').open)settingsUI.message(history.error,true);}return ok;
 }
@@ -262,23 +293,31 @@ function prepareClose(){
 window.prepareBilliardsClose=prepareClose;
 function showResult(message){
  roundClock.pause();updateClock();cancelAction();paused=true;view.setStance(false);updateStats();refreshInteraction();saveRound();
- $('result-title').textContent=ref.outcome==='win'?'本局获胜':'本局失败';$('result-message').textContent=message;
- const scores=ref.difficulty?`${matchLabel(ref.difficulty)} · 你 ${ref.scores[0]} : ${ref.scores[1]} 电脑`:`${ref.score} 分${mode==='snooker'?` · 罚分 ${ref.penaltyPoints}`:''}`;
- const maximum=ref.maximum?` · ${ref.maximum.player===0?'你':'电脑'}单杆 ${ref.maximum.points} 分`:'';
+ const names=sideNames(tournament);
+ $('result-title').textContent=tournament?.showcase?`${names[ref.outcome==='win'?0:1]}赢得本局`:ref.outcome==='win'?'本局获胜':'本局失败';
+ $('result-message').textContent=tournament?.showcase?'本局比分已计入比赛':message;
+ const scores=ref.difficulty?`${tournament?.showcase?'高手如云':matchLabel(ref.difficulty)} · ${names[0]} ${ref.scores[0]} : ${ref.scores[1]} ${names[1]}`:`${ref.score} 分${mode==='snooker'?` · 罚分 ${ref.penaltyPoints}`:''}`;
+ const maximum=ref.maximum?` · ${names[ref.maximum.player]}单杆 ${ref.maximum.points} 分`:'';
  $('result-summary').textContent=`${MODES[mode].name} · ${scores}${maximum} · ${ref.shots} 杆 · 犯规 ${ref.fouls} 次 · 用时 ${formatTime(roundClock.value())}`;
  renderPayout();
  $('result').showModal();$('play-again').focus();
+ if(tournament?.showcase&&tournament.controlledSide===null&&roundPayout?.advance)nextShowcaseFrame=performance.now()+2600;
 }
 function finishTournament(){
  if(roundPayout)return true;
  const {key,stage}=tournament,details=EVENTS[mode][key],won=ref.outcome==='win';
+ const progress=recordFrame(mode,details,tournament,won);
+ if(tournament.showcase){
+  if(progress.next)showcaseNextRound=nextRoundSnapshot(progress);
+  roundPayout={advance:!!progress.next,kind:progress.kind,score:progress.score};
+  return true;
+ }
  const breaks=ref.maximum?[...(tournament.breaks??[]),{...ref.maximum,stage}]:tournament.breaks??[];
  const bestBreaks=(tournament.bestBreaks??[null,null]).map((best,player)=>{
   const frame=ref.bestBreaks?.[player];
   if(!frame||best?.points>frame.points)return best;
   return {points:frame.points,count:frame.count+(best?.points===frame.points?best.count:0)};
  });
- const progress=recordFrame(mode,details,tournament,won);
  try{
   roundPayout=history.transact(({account,rounds})=>{
    const previousScore=(tournament.matchScore??[0,0]).join(':');
@@ -288,14 +327,7 @@ function finishTournament(){
    if(progress.next){
     if(breaks.length)progress.next.breaks=breaks;
     if(bestBreaks.some(Boolean))progress.next.bestBreaks=bestBreaks;
-    const nextWorld=new World(mode),nextRef=new Referee(mode,ref.difficulty);
-    nextRef.turn=progress.next.breaker;
-    nextRef.computerFatigue=progress.kind==='frame'&&ref.computerFatigue?
-     nextFrameFatigue(ref.computerFatigue,roundClock.value()):freshComputerFatigue();
-    rounds[index]=roundSnapshot({
-     world:nextWorld,ref:nextRef,tournament:progress.next,ballInHand:!progress.next.opening&&nextRef.turn===0,
-     elapsedMs:0,spin:{x:0,y:0},orbit:Math.PI
-    });
+    rounds[index]=nextRoundSnapshot(progress);
     return {advance:true,kind:progress.kind,score:progress.score};
    }
    const quote=tournament.quote??LEGACY_QUOTE;
@@ -317,6 +349,20 @@ function finishTournament(){
   return false;
  }
 }
+function nextRoundSnapshot({kind,next}){
+ const nextWorld=new World(mode),nextRef=new Referee(mode,ref.difficulty);
+ nextRef.turn=next.breaker;
+ const fatigue=previous=>kind==='frame'&&previous?nextFrameFatigue(previous,roundClock.value()):freshComputerFatigue();
+ nextRef.computerFatigue=fatigue(ref.computerFatigue);
+ if(next.showcase){
+  nextRef.leftComputerGrip=1;
+  nextRef.leftComputerFatigue=fatigue(ref.leftComputerFatigue);
+ }
+ return roundSnapshot({
+  world:nextWorld,ref:nextRef,tournament:next,ballInHand:!next.opening&&nextRef.turn===humanSide(next),
+  elapsedMs:0,spin:{x:0,y:0},orbit:Math.PI
+ });
+}
 function renderPayout(){
  const payout=$('result-payout');
  payout.hidden=!tournament;
@@ -325,6 +371,11 @@ function renderPayout(){
  if(!roundPayout){payout.textContent='结算尚未保存，请重试。';return;}
  updateScoreboard(roundPayout.score);
  const score=tournamentScore(mode,tournament,roundPayout.score);
+ if(tournament.showcase){
+  payout.textContent=`${score} · ${roundPayout.kind==='frame'?'本轮继续':roundPayout.advance?'进入下一轮':'赛事结束'}`;
+  refreshControlButtons();
+  return;
+ }
  payout.textContent=roundPayout.kind==='frame'?`${score} · 本轮继续`:
   roundPayout.advance?`${score} · 晋级下一轮。奖金在赛事结束时结算。`:
   `${score} · ${roundPayout.title} · 总奖金 ${money(roundPayout.value)}${roundPayout.bonusLabel} · 偿还贷款 ${money(roundPayout.paid)} · 实际到账 ${money(roundPayout.credit)} · 余额 ${money(roundPayout.balance)}${roundPayout.quoteDate?' · 汇率日期 '+roundPayout.quoteDate:''}`;
@@ -343,13 +394,16 @@ function showHistory(){
 }
 function continueRound(id){
  const snapshot=history.read().find(s=>s.id===id);if(!snapshot){$('history-empty').hidden=false;$('history-empty').textContent=history.error||'未找到这局存档。';return;}
+ loadRound(snapshot);
+}
+function loadRound(snapshot){
  let restored;try{restored=restoreRound(snapshot);}catch(e){$('history-empty').hidden=false;$('history-empty').textContent=e.message;return;}
  audio.stop();cancelAction();$('history').close();mode=snapshot.mode;world=restored.world;ref=restored.ref;
  tournament=snapshot.tournament??null;roundPayout=null;
  clearCoach();
- computerTime=0;computerPlan=null;computerSearch=null;$('opponent').value=ref.difficulty?'computer':'';
+ computerTime=0;computerPlan=null;computerSearch=null;$('opponent').value=tournament?.showcase?'showcase':ref.difficulty?'computer':'';
  if(ref.difficulty&&!ref.computerFatigue)ref.computerFatigue=freshComputerFatigue();
- const state=restored.view;started=true;paused=false;roundId=id;createdAt=snapshot.createdAt;ballInHand=state.ballInHand;spin={...state.spin};guide=state.guide;soundEnabled=state.soundEnabled;audio.setEnabled(soundEnabled);
+ const state=restored.view;started=true;paused=false;roundId=snapshot.id;createdAt=snapshot.createdAt;ballInHand=state.ballInHand;spin={...state.spin};guide=state.guide;soundEnabled=state.soundEnabled;audio.setEnabled(soundEnabled);
  view.setup(world);view.start();view.orbit=state.orbit;view.eyeHeight=state.eyeHeight;view.snapObservation();view.showPlacement(ballInHand?world.cuePlacementZone:null);
  placementUI.candidate=null;placementUI.draw();eventCursor=world.events.length;accumulator=0;last=performance.now();lastCheckpoint=last;roundClock.reset(snapshot.elapsedMs);roundClock.start();
  document.body.classList.add('playing');$('welcome').hidden=true;$('game-hud').hidden=false;updateSpin();updatePower();updateStats();updateOptions();updateClock();refreshInteraction();dirty=true;$('scene').focus({preventScroll:true});
@@ -373,9 +427,10 @@ function updatePower(){
 function updateSpin(){const length=Math.hypot(spin.x,spin.y);if(length>1){spin.x/=length;spin.y/=length;}$('spin-dot').style.left=50+spin.x*40+'%';$('spin-dot').style.top=50-spin.y*40+'%';$('spin-pad').setAttribute('aria-valuenow',String(Math.round(Math.hypot(spin.x,spin.y)*80)));$('spin-description').textContent=(Math.abs(spin.x)<.1?'':spin.x<0?'左塞 · ':'右塞 · ')+(Math.abs(spin.y)<.1?'中心击球':spin.y>0?'高杆':'低杆');dirty=true;}
 function setGuide(value){guide=value;updateOptions();dirty=true;}
 function updateOptions(){$('options-status').textContent=`音效 ${soundEnabled?'开':'关'}`;for(const button of document.querySelectorAll('[data-guide]')){button.textContent=`辅助线：${guide?'开':'关'}`;button.setAttribute('aria-pressed',String(guide));}}
-function togglePause(){if(['result','history','rule-choice','opening-break','difficulty','event-dialog','bank'].some(id=>$(id).open))return;if($('settings').open){resume();return;}roundClock.pause();paused=true;audio.stop();cancelAction();settingsUI.open();saveRound();dirty=true;}
+function togglePause(){if(['result','take-over-dialog','history','rule-choice','opening-break','difficulty','event-dialog','bank'].some(id=>$(id).open))return;if($('settings').open){resume();return;}roundClock.pause();paused=true;audio.stop();cancelAction();settingsUI.open();saveRound();dirty=true;}
 function resume(){$('settings').close();$('scene').focus({preventScroll:true});cancelAction();paused=false;if(started&&!ref.done)roundClock.start();last=performance.now();accumulator=0;dirty=true;}
 function goBack(){
+ if($('take-over-dialog').open){closeTakeOver();return;}
  if($('bank').open){closeBank();return;}
  if($('event-dialog').open){closeEvents();return;}
  if($('difficulty').open){closeDifficulty();return;}
@@ -387,7 +442,7 @@ function goBack(){
  if(started){setup(mode);return;}
  exit();
 }
-function exit(){if(!prepareClose())return;if(window.chrome?.webview)window.chrome.webview.postMessage({type:'exit'});else{if(started&&!ref.done&&!$('settings').open)settingsUI.open();toast('未完成的球局已保存，可关闭此标签页退出');}}
+function exit(){if(!prepareClose())return;if(window.chrome?.webview)window.chrome.webview.postMessage({type:'exit'});else{if(started&&!ref.done&&!$('settings').open)settingsUI.open();toast(tournament?.showcase?'可关闭此标签页结束观赛':'未完成的球局已保存，可关闭此标签页退出');}}
 function shot(){
  if(!canShoot()){power=0;updatePower();return;}
  if(power<.015){power=0;updatePower();return;}
@@ -472,11 +527,12 @@ function advanceComputer(elapsed){
  computerTime+=elapsed;
  if(computerTime<.65)return;
  if(!computerPlan){
-  if(!computerSearch&&computerNeedsChalk(ref)&&view.beginChalk('computer')){
+  const planner=computerPerspective(ref,ref.turn);
+  if(!computerSearch&&computerNeedsChalk(planner)&&view.beginChalk('computer')){
    dirty=true;
    return;
   }
-  computerSearch??=computerShotSearch(world,ref,Math.random,computerFatigueLevel(ref.computerFatigue,roundClock.value(),ref.difficulty));
+  computerSearch??=computerShotSearch(world,planner,Math.random,computerFatigueLevel(planner.computerFatigue,roundClock.value(),ref.difficulty));
   const deadline=performance.now()+5;
   let step=computerSearch.next();
   while(!step.done&&performance.now()<deadline)step=computerSearch.next();
@@ -484,23 +540,27 @@ function advanceComputer(elapsed){
   computerSearch=null;
   const plan=step.value;
   if(!plan)return;
-  if(computerNeedsChalk(ref,plan)&&view.beginChalk('computer')){
+  if(computerNeedsChalk(planner,plan)&&view.beginChalk('computer')){
    dirty=true;
    return;
   }
-  if(plan.placement&&!world.placeCue(plan.placement.x,plan.placement.y))return;
+  if(plan.placement&&!tournament?.showcase&&!world.placeCue(plan.placement.x,plan.placement.y))return;
   computerPlan=plan;computerTime=.65;dirty=true;
   return;
  }
  if(computerTime<1.45){dirty=true;return;}
  const {angle,speed,top,side,breakBoost}=computerPlan;
+ const placement=computerPlan.placement;
+ if(tournament?.showcase&&placement&&!world.placeCue(placement.x,placement.y)){computerPlan=null;computerTime=0;return;}
+ const grip=ref.turn===0?'leftComputerGrip':'computerGrip';
+ const fatigue=ref.turn===0?ref.leftComputerFatigue:ref.computerFatigue;
  const playerGrip=world.tipCondition;
- world.tipCondition=ref.computerGrip;
+ world.tipCondition=ref[grip]??1;
  ref.begin(world);
  const struck=world.strike(angle,speed,side,top,{breakBoost});
- ref.computerGrip=world.tipCondition;
+ ref[grip]=world.tipCondition;
  world.tipCondition=playerGrip;
- if(struck&&ref.computerFatigue)recordComputerStroke(ref.computerFatigue,computerPlan);
+ if(struck&&fatigue)recordComputerStroke(fatigue,computerPlan);
  computerPlan=null;computerTime=0;dirty=true;
  if(struck){
   eventCursor=0;accumulator=0;
@@ -509,6 +569,7 @@ function advanceComputer(elapsed){
 }
 function frame(now){
  requestAnimationFrame(frame);const elapsed=Math.min(.08,(now-last)/1000);last=now;
+ if(nextShowcaseFrame&&now>=nextShowcaseFrame&&!document.hidden&&!$('take-over-dialog').open){nextShowcaseFrame=0;openNextEventRound();}
  if(paused||document.hidden)return;
  if(tournament?.opening?.kind==='lag'&&$('opening-break').open)lagView.update(elapsed);
  if(started&&!ref.done){updateClock();if(now-lastCheckpoint>10000){lastCheckpoint=now;saveRound();}}
@@ -546,7 +607,7 @@ function frame(now){
  if(view.chalkCompleted){
   const computer=view.chalkCompleted==='computer';
   view.chalkCompleted=false;
-  if(computer)ref.computerGrip=1;
+  if(computer)ref[ref.turn===0?'leftComputerGrip':'computerGrip']=1;
   else{
    world.tipCondition=1;
    if(coachAdvice||coachSearch){
@@ -554,6 +615,8 @@ function frame(now){
     view.snapObservation();
    }
   }
+  if(tournament?.showcase&&!computerTurn()&&computer)world.tipCondition=1;
+  if(tournament?.showcase&&ballInHand)beginPlacement();
   updatePower();saveRound();
   if(!computer)toast('巧粉已放回桌边 · 抓球状态恢复');
  }
@@ -566,8 +629,18 @@ refreshBindingHint();updateOptions();
 try{
  view=new BilliardScene($('scene'));placementUI=new PlacementUI($('placement-map'),()=>world,placeAt);setDesktop(desktop);requestAnimationFrame(frame);
 }catch(e){fail(e);}
-window.chrome?.webview?.addEventListener('message',event=>{if(event.data.type==='desktop')setDesktop(event.data.payload);if(event.data.type==='pause'&&started&&!paused)togglePause();});
-function start(difficulty=null,eventKey=null,quote=exchange.quote){
+updateWindowMode();
+window.chrome?.webview?.addEventListener('message',event=>{
+ if(event.data.type==='desktop')setDesktop(event.data.payload);
+ if(event.data.type==='pause'&&!floatingWindow&&started&&!paused)togglePause();
+ if(event.data.type==='windowMode'){
+  floatingWindow=event.data.floating===true;
+  updateWindowMode();
+  $('floating-window').disabled=false;
+  if($('settings').open)resume();
+ }
+});
+function start(difficulty=null,eventKey=null,quote=exchange.quote,showcase=false){
  if(started||paused)return;
  if(eventKey&&difficulty==='low'&&eventKey!=='club'){
   $('event-error').textContent='低档仅限球房周赛，其他赛事请选择中档或高档。';
@@ -576,7 +649,11 @@ function start(difficulty=null,eventKey=null,quote=exchange.quote){
  const id=crypto.randomUUID(),created=Date.now(),judge=new Referee(mode,difficulty);
  if(difficulty)judge.computerFatigue=freshComputerFatigue();
  const entry=eventKey?{key:eventKey,stage:openingStage(eventKey,EVENTS[mode][eventKey]),quote,matchScore:[0,0],breaker:0,opening:openingBreak(mode)}:null;
- if(entry){
+ if(showcase){
+  Object.assign(entry,{showcase:true,controlledSide:null});
+  Object.assign(judge,{leftComputerGrip:1,leftComputerFatigue:freshComputerFatigue()});
+ }
+ if(entry&&!showcase){
   const details=EVENTS[mode][eventKey],fee=toPence(details.fee,details.currency,quote);
   try{
    history.transact(({account,rounds})=>{
@@ -587,8 +664,8 @@ function start(difficulty=null,eventKey=null,quote=exchange.quote){
     rounds.unshift(roundSnapshot({id,createdAt:created,ref:judge,elapsedMs:0,ballInHand:false,tournament:entry}));
    });
   }catch(error){$('event-error').textContent=error.message;return;}
-  $('event-dialog').close();
  }
+ if(entry)$('event-dialog').close();
  cancelAction();ref=judge;tournament=entry;roundPayout=null;started=true;roundId=id;createdAt=created;
  roundClock.reset();roundClock.start();lastCheckpoint=performance.now();view.start();
  $('welcome').hidden=true;$('game-hud').hidden=false;document.body.classList.add('playing');
@@ -601,11 +678,62 @@ function start(difficulty=null,eventKey=null,quote=exchange.quote){
 function requestStart(){
  if(started||paused||$('difficulty').open||$('event-dialog').open||$('bank').open)return;
  if($('opponent').value==='computer')$('difficulty').showModal();
+ else if($('opponent').value==='showcase')openEvents('high',true);
  else start();
 }
 function openNextEventRound(){
- const id=roundId;
- if(setup(mode)!==false)continueRound(id);
+ const id=roundId,next=showcaseNextRound;
+ if(setup(mode)===false)return;
+ if(next)loadRound(next);
+ else continueRound(id);
+}
+function refreshControlButtons(){
+ const handBack=canHandBack(),visible=canTakeOver()||handBack;
+ for(const id of ['take-over','take-over-result']){
+  $(id).hidden=!visible;
+  $(id).textContent=handBack?'交还电脑':'接管比赛';
+ }
+ $('hand-back-rule').hidden=!handBack;
+}
+function toggleShowcaseControl(){
+ if(canHandBack())setShowcaseControl(null);
+ else openTakeOver();
+}
+function openTakeOver(){
+ if(!canTakeOver())return;
+ if(!ref.done){roundClock.pause();paused=true;cancelAction();}
+ $('take-over-status').textContent='保留当前比分和球位。正在运动的球会先完成这一杆。';
+ $('take-over-dialog').showModal();
+}
+function closeTakeOver(){
+ $('take-over-dialog').close();
+ if(!ref.done){paused=false;roundClock.start();last=performance.now();$('scene').focus({preventScroll:true});}
+}
+function setShowcaseControl(side){
+ const handBack=side===null;
+ if(handBack?!canHandBack():!canTakeOver()||!$('take-over-dialog').open)return;
+ if(ref.done){
+  const next=showcaseNextRound;
+  if(!next)return;
+  next.tournament.controlledSide=side;
+  next.view.ballInHand=!next.tournament.opening&&next.referee.turn===side&&!!next.world.cuePlacementZone;
+  if(!handBack)next.world.tipCondition=(side===0?next.referee.leftComputerGrip:next.referee.computerGrip)??1;
+  closeTakeOver();openNextEventRound();return;
+ }
+ const oldGrip=world.tipCondition,gripKey=tournament.controlledSide===0?'leftComputerGrip':'computerGrip';
+ tournament={...tournament,controlledSide:side};
+ if(handBack){ref[gripKey]=oldGrip;spin={x:0,y:0};}
+ else world.tipCondition=(side===0?ref.leftComputerGrip:ref.computerGrip)??1;
+ ballInHand=!world.running&&ref.turn===side&&!!world.cuePlacementZone;
+ computerTime=0;computerPlan=null;computerSearch=null;
+ if(handBack){
+  if(view.chalkMotion)view.chalkMotion.owner='computer';
+  cancelAction();view.setStance(false);view.showPlacement(null);updateSpin();
+  $('scene').focus({preventScroll:true});
+ }else closeTakeOver();
+ if(ballInHand&&!view.chalkMotion)beginPlacement();
+ updateStats();refreshInteraction();dirty=true;
+ if(ref.decision)presentRuleChoice();
 }
 function closeDifficulty(){
  $('difficulty').close();
@@ -616,10 +744,11 @@ function refreshWallet(){
  catch{$('home-wallet').textContent='资金读取失败';}
 }
 function closeEvents(){
- $('event-dialog').close();pendingDifficulty=null;$('start-game').focus();
+ $('event-dialog').close();pendingDifficulty=null;pendingShowcase=false;$('start-game').focus();
 }
-function openEvents(difficulty){
+function openEvents(difficulty,showcase=false){
  pendingDifficulty=difficulty;
+ pendingShowcase=showcase;
  $('event-year').closest('.event-filter').hidden=difficulty==='low';
  const years=[...new Set(Object.values(EVENTS[mode]).filter(event=>event.source).map(event=>event.edition.slice(0,4)))].sort().reverse();
  $('event-year').replaceChildren(new Option('全部年份',''),...years.map(year=>new Option(year,year)));
@@ -674,7 +803,9 @@ function renderEvents(){
  catch(error){$('event-wallet').textContent=error.message;return;}
  const low=pendingDifficulty==='low';
  const formatNote=low?'低档仅限球房周赛，其他赛事请选择中档或高档。':'达到本轮胜局数才晋级，赛事结束按名次结算。';
- $('event-wallet').textContent=`${DIFFICULTIES[pendingDifficulty]} · 余额 ${money(account.balance)}。${formatNote}`;
+ $('event-wallet').textContent=pendingShowcase?'高手如云 · 双方高档 · 观赛和接管均免费':`${DIFFICULTIES[pendingDifficulty]} · 余额 ${money(account.balance)}。${formatNote}`;
+ $('event-bank').hidden=pendingShowcase;
+ $('event-fx').hidden=pendingShowcase;
  const quote=exchange.quote;
  $('event-fx').textContent=`欧洲央行参考汇率 · ${quote.date} · ${exchange.status}。报名时锁定本届费用和奖金折算汇率。`;
  const format=(details,n)=>money(toPence(n,details.currency,quote));
@@ -693,7 +824,7 @@ function renderEvents(){
    const stage=first+i;
    return `${stageName(details.prizes.length-1-stage)} ${raceLabel(mode,raceTo(mode,key,details,stage))}`;
   });
-  terms.textContent=`${rounds[0]}起 · 冠军 ${format(details,details.prizes[0])}${details.prizes[1]?` · 亚军 ${format(details,details.prizes[1])}`:''}`;
+  terms.textContent=pendingShowcase?`${rounds[0]}起`:`${rounds[0]}起 · 冠军 ${format(details,details.prizes[0])}${details.prizes[1]?` · 亚军 ${format(details,details.prizes[1])}`:''}`;
   info.append(title,terms);
   const opening=document.createElement('p');
   opening.textContent=(mode==='snooker'?'首局抽签':'首局比球')+(key==='club'?'':breakOrder(mode,key)==='winner'?' · 胜者开球':' · 轮流开球');
@@ -701,8 +832,8 @@ function renderEvents(){
   const fees=document.createElement('p');
   fees.textContent=fee?`报名费 ${money(fee)}${details.feeSimulated?'（游戏设定）':details.feeNote?`（${details.feeNote}）`:''}`:
    details.feeSimulated?'游戏内免报名费':'免报名费';
-  info.append(fees);
-  if(details.minWins){
+  if(!pendingShowcase)info.append(fees);
+  if(details.minWins&&!pendingShowcase){
    const qualification=document.createElement('p');
    qualification.textContent=`报名资格：在${MODES[mode].name}的人机赛事中夺冠 ${details.minWins} 次。免费球房周赛赢一局即夺冠；多轮赛事须赢下决赛。`;
    info.append(qualification);
@@ -716,16 +847,16 @@ function renderEvents(){
    info.append(link);
   }
   const prizes=document.createElement('details'),summary=document.createElement('summary');
-  summary.textContent='各轮赛制与奖金';
+  summary.textContent=pendingShowcase?'各轮赛制':'各轮赛制与奖金';
   prizes.append(summary);
   const amounts=document.createElement('p');
-  amounts.textContent=[...rounds,`冠军 ${format(details,details.prizes[0])}`,...rounds.map((label,i)=>{
+  amounts.textContent=pendingShowcase?rounds.join(' · '):[...rounds,`冠军 ${format(details,details.prizes[0])}`,...rounds.map((label,i)=>{
    const remaining=details.prizes.length-1-first-i;
    const prize=details.prizes[remaining]??0;
    return `${remaining===1&&prize?'亚军':stageName(remaining)+'止步'} ${format(details,prize)}`;
   })].join(' · ');
   prizes.append(amounts);info.append(prizes);
-  const bonus=mode==='snooker'?SNOOKER_BREAK_PRIZES[key]:null;
+  const bonus=mode==='snooker'&&!pendingShowcase?SNOOKER_BREAK_PRIZES[key]:null;
   if(bonus){
    const breaks=document.createElement('p');
    breaks.textContent=[bonus.maximum&&`147 专项奖池 ${money(bonus.maximum*100)}${bonus.qualifying?'（正赛） · 资格赛 '+money(bonus.qualifying*100):''}`,
@@ -738,9 +869,9 @@ function renderEvents(){
   }
   const button=document.createElement('button');button.type='button';button.dataset.event=key;
   const refreshing=details.currency!=='GBP'&&!!exchange.pending;
-  button.disabled=!!missing||account.balance<fee||refreshing;
-  button.textContent=missing?`还需 ${missing} 个同项目冠军`:refreshing?'正在更新汇率':account.balance<fee?'余额不足':fee?'报名并扣费':'免费报名';
-  button.addEventListener('click',()=>start(pendingDifficulty,key,quote));
+  button.disabled=!pendingShowcase&&(!!missing||account.balance<fee||refreshing);
+  button.textContent=pendingShowcase?'开始观赛':missing?`还需 ${missing} 个同项目冠军`:refreshing?'正在更新汇率':account.balance<fee?'余额不足':fee?'报名并扣费':'免费报名';
+  button.addEventListener('click',()=>start(pendingDifficulty,key,quote,pendingShowcase));
   card.append(info,button);list.append(card);
  }
 }
@@ -825,22 +956,34 @@ $('coach-apply').addEventListener('click',()=>{
  $('scene').focus({preventScroll:true});
 });
 $('settings-close').addEventListener('click',resume);
+$('floating-window').addEventListener('click',()=>{
+ const bridge=window.chrome?.webview;
+ if(!bridge)return;
+ $('floating-window').disabled=true;
+ bridge.postMessage({type:'toggleFloating'});
+});
 $('confirm-placement').addEventListener('click',()=>{confirmPlacement();$('scene').focus({preventScroll:true});});
 $('history-open').addEventListener('click',showHistory);
 $('history-close').addEventListener('click',()=>{$('history').close();$('history-open').focus();});
 $('return-home').addEventListener('click',()=>setup(mode));
 $('result-home').addEventListener('click',()=>setup(mode));
+$('take-over').addEventListener('click',toggleShowcaseControl);
+$('take-over-result').addEventListener('click',toggleShowcaseControl);
+$('hand-back-rule').addEventListener('click',toggleShowcaseControl);
+$('take-over-cancel').addEventListener('click',closeTakeOver);
+for(const button of document.querySelectorAll('[data-take-side]'))button.addEventListener('click',()=>setShowcaseControl(Number(button.dataset.takeSide)));
 $('play-again').addEventListener('click',()=>{
  const difficulty=ref.difficulty;
+ const showcase=!!tournament?.showcase;
  if(tournament){
   if(!roundPayout){finishTournament();renderPayout();return;}
   if(roundPayout.advance)openNextEventRound();
-  else if(setup(mode)!==false)openEvents(difficulty);
+  else if(setup(mode)!==false)openEvents(difficulty,showcase);
  }else if(setup(mode)!==false){
   if(difficulty)openEvents(difficulty);else start();
  }
 });
-for(const id of ['result','history','rule-choice','opening-break'])$(id).addEventListener('cancel',e=>e.preventDefault());
+for(const id of ['result','take-over-dialog','history','rule-choice','opening-break'])$(id).addEventListener('cancel',e=>e.preventDefault());
 function finishLag(result){
  const opening=tournament?.opening;
  if(opening?.kind!=='lag'||opening.chooser!==undefined)return;
@@ -873,7 +1016,9 @@ $('concede-frame').addEventListener('click',()=>{
  if(eliteComputer(ref.difficulty)&&computerTurn()&&ref.breakPoints>0&&ref.canMake147(world)){
   toast('电脑选择继续冲击 147，本局继续');return;
  }
- const message=ref.concede(world,0);
+ const side=humanSide(tournament);
+ if(side===null)return;
+ const message=ref.concede(world,side);
  if(message)showResult(message);
 });
 window.addEventListener('pagehide',()=>{roundClock.pause();saveRound();});
@@ -947,7 +1092,7 @@ window.addEventListener('keyup',e=>{
  if(action&&![...heldCodes.values()].includes(action))keys.delete(action);
  if(drag?.type==='keyboard-shot'&&drag.code===e.code){drag=null;if(!paused&&!e.ctrlKey&&!e.altKey&&!e.metaKey)shot();else cancelAction();}
 });
-window.addEventListener('blur',()=>{cancelAction();if(started&&!paused)togglePause();});
-document.addEventListener('visibilitychange',()=>{last=performance.now();accumulator=0;if(document.hidden&&started&&!paused)togglePause();dirty=true;});
+window.addEventListener('blur',()=>{cancelAction();if(!floatingWindow&&started&&!paused)togglePause();});
+document.addEventListener('visibilitychange',()=>{last=performance.now();accumulator=0;if(document.hidden&&!floatingWindow&&started&&!paused)togglePause();dirty=true;});
 // Development inspection hook, only on localhost or an explicit native test build.
 if(location.hostname==='127.0.0.1'||location.hostname==='localhost'||window.BILLIARDS_TEST)window.billiards={get audio(){return audio;},get world(){return world;},get ref(){return ref;},get view(){return view;},get state(){return {started,paused,ballInHand,power,mode,posture:view.stance?'aim':'observe',placementZone:world.cuePlacementZone,spin:{...spin},guide,soundEnabled,elapsedMs:roundClock.value(),roundId};},get bindings(){return {...bindings.bindings};},setup,shot:(angle,p=.4)=>{if(canShoot()){view.aim=angle;power=p;shot();}},setDesktop};

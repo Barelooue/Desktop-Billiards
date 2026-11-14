@@ -37,6 +37,8 @@ export function validateRound(s){
  if(!['shots','score','fouls','penaltyPoints'].every(k=>Number.isFinite(r[k])&&r[k]>=0)||!Array.isArray(r.targetBefore)||![null,'solid','stripe'].includes(r.group)||!['open','red','color','clear'].includes(r.phase))return false;
  if(r.difficulty!==undefined&&(!Object.hasOwn(DIFFICULTIES,r.difficulty)||![0,1].includes(r.turn)||!Array.isArray(r.scores)||r.scores.length!==2||!r.scores.every(n=>Number.isInteger(n)&&n>=0)||!Number.isFinite(r.computerGrip)||r.computerGrip<0||r.computerGrip>1))return false;
  if(r.computerFatigue!==undefined&&(!r.difficulty||!validComputerFatigue(r.computerFatigue)))return false;
+ if(r.leftComputerFatigue!==undefined&&(!r.difficulty||!validComputerFatigue(r.leftComputerFatigue)))return false;
+ if(r.leftComputerGrip!==undefined&&(!Number.isFinite(r.leftComputerGrip)||r.leftComputerGrip<0||r.leftComputerGrip>1))return false;
  if(r.foulStreak!==undefined&&(!Array.isArray(r.foulStreak)||r.foulStreak.length!==2||!r.foulStreak.every(n=>[0,1,2].includes(n))))return false;
  if(r.breakPoints!==undefined&&(!Number.isInteger(r.breakPoints)||r.breakPoints<0||r.breakPoints>155))return false;
  if(r.bestBreaks!==undefined&&!validBestBreaks(r.bestBreaks))return false;
@@ -49,6 +51,7 @@ export function validateRound(s){
   const validScore=(score,limit)=>Array.isArray(score)&&score.length===2&&score.every(n=>Number.isInteger(n)&&n>=0&&n<limit);
   if(t.matchScore!==undefined&&!validScore(t.matchScore,wins))return false;
   if(t.breaker!==undefined&&![0,1].includes(t.breaker))return false;
+  if(t.showcase!==undefined&&(t.showcase!==true||r.difficulty!=='high'||![null,0,1].includes(t.controlledSide)))return false;
   if(t.bestBreaks!==undefined&&!validBestBreaks(t.bestBreaks))return false;
   if(t.breaks!==undefined&&(!Array.isArray(t.breaks)||!t.breaks.every(b=>b&&[0,1].includes(b.player)&&
    Number.isInteger(b.points)&&b.points>=147&&b.points<=155&&Number.isInteger(b.stage)&&b.stage>=openingStage(t.key,details)&&b.stage<=t.stage)))return false;
@@ -62,7 +65,7 @@ export function validateRound(s){
   if(t.completed!==undefined&&(!Array.isArray(t.completed)||!t.completed.every((round,i)=>{
    if(!round||!Number.isInteger(round.stage)||round.stage!==t.stage-t.completed.length+i||round.stage<openingStage(t.key,details))return false;
    const limit=raceTo(s.mode,t.key,details,round.stage);
-   return validScore(round.score,limit+1)&&round.score[0]===limit&&round.score[1]<limit;
+   return validScore(round.score,limit+1)&&(t.showcase?Math.max(...round.score)===limit&&Math.min(...round.score)<limit:round.score[0]===limit&&round.score[1]<limit);
   })))return false;
  }
  return ['orbit','eyeHeight'].every(k=>Number.isFinite(v[k]))&&v.eyeHeight>=.85&&v.eyeHeight<=1.1&&typeof v.ballInHand==='boolean'&&typeof v.guide==='boolean'&&typeof v.soundEnabled==='boolean'&&v.spin&&['x','y'].every(k=>Number.isFinite(v.spin[k])&&Math.abs(v.spin[k])<=1);
@@ -95,14 +98,14 @@ export class HistoryStore{
  keepRecentRounds(data){
   const cutoff=this.now()-ROUND_RETENTION_MS;
   const previous=data.rounds.length;
-  data.rounds=data.rounds.filter(round=>round.updatedAt>cutoff);
+  data.rounds=data.rounds.filter(round=>!round.tournament?.showcase&&round.updatedAt>cutoff);
   return data.rounds.length!==previous;
  }
  readRecentData(){
   const data=this.readData();
   if(this.keepRecentRounds(data)){
    try{this.storage.setItem(HISTORY_KEY,JSON.stringify(data));}
-   catch{this.error='过期球局已隐藏，本机存储暂时无法清理。';}
+   catch{this.error='部分球局已隐藏，本机存储暂时无法清理。';}
   }
   return data;
  }

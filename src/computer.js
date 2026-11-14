@@ -5,6 +5,15 @@ import {PLAYER_MAX_SPEED,PLAYER_SPIN_LIMIT,BREAK_MAX_SPEED,isPoolBreak} from './
 
 export const DIFFICULTIES=Object.freeze({low:'低档 · 普通玩家',medium:'中档 · 职业球员',high:'高档 · 顶尖球员',star:'巅峰球星'});
 export const eliteComputer=difficulty=>difficulty==='high'||difficulty==='star';
+
+// The shot planner evaluates positions from side 1's perspective.
+export function computerPerspective(ref,side){
+ if(side===1)return ref;
+ const reverse=values=>values&&[values[1],values[0]];
+ return Object.assign(new Referee(ref.mode),ref,{turn:1-ref.turn,scores:reverse(ref.scores),
+  foulStreak:reverse(ref.foulStreak),bestBreaks:reverse(ref.bestBreaks),
+  computerGrip:ref.leftComputerGrip??1,computerFatigue:ref.leftComputerFatigue});
+}
 const LEVELS={
  low:{error:.010,powerError:.075},
  medium:{error:.0028,powerError:.026,spinError:.06},

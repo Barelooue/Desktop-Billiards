@@ -41,8 +41,8 @@ export function raceLabel(mode,target){
  if(target===1)return '单局决胜';
  return mode==='snooker'?`${2*target-1} 局 ${target} 胜`:`抢 ${target}`;
 }
-export function matchLabelText(mode,target,score){
- return `大比分 你 ${score[0]} : ${score[1]} 电脑 · ${raceLabel(mode,target)}`;
+export function matchLabelText(mode,target,score,names=['你','电脑']){
+ return `大比分 ${names[0]} ${score[0]} : ${score[1]} ${names[1]} · ${raceLabel(mode,target)}`;
 }
 export function breakOrder(mode,key){
  // These Matchroom opens, Masters and World Championship editions use winner breaks.
@@ -64,7 +64,7 @@ export function recordFrame(mode,details,tournament,playerWon){
   return {kind:'frame',score,next:{...tournament,matchScore:score,breaker:breakOrder(mode,key)==='winner'?winner:1-breaker}};
  }
  const completed=[...(tournament.completed??[]),{stage,score}];
- if(playerWon&&stage<details.prizes.length-2){
+ if((tournament.showcase&&tournament.controlledSide===null||winner===(tournament.controlledSide??0))&&stage<details.prizes.length-2){
   return {kind:'round',score,completed,next:{...tournament,stage:stage+1,matchScore:[0,0],breaker:0,opening:openingBreak(mode),completed}};
  }
  return {kind:'event',score,completed};

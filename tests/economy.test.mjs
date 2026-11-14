@@ -7,6 +7,17 @@ import {HistoryStore,HISTORY_KEY} from '../src/session.js';
 import {openingStage,raceTo,recordFrame,openingBreak,breakOrder} from '../src/match-format.js';
 import {makeLagWorld,strikeLag,lagResult} from '../src/lag.js';
 
+test('Showcase preserves race length and uses the chosen side for tournament progression',()=>{
+ const mode='nine',key='uk',details=EVENTS[mode][key],stage=openingStage(key,details);
+ const target=raceTo(mode,key,details,stage);
+ const event={key,stage,breaker:0,matchScore:[0,target-1],showcase:true,controlledSide:null};
+ const next=recordFrame(mode,details,event,false);
+ assert.equal(next.kind,'round');
+ assert.deepEqual(next.completed[0].score,[0,target]);
+ assert.equal(recordFrame(mode,details,{...event,controlledSide:0},false).kind,'event');
+ assert.equal(recordFrame(mode,details,{...event,controlledSide:1},false).kind,'round');
+});
+
 test('Edition-specific 147 and high-break prize pools are settled independently',()=>{
  const maximum={player:0,points:147,stage:0},other={...maximum,player:1};
  assert.deepEqual(snookerBreakPrize('club',[maximum]),{maximum:0,high:0});

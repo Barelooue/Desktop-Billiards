@@ -73,3 +73,13 @@ test('History deletes rounds 72 hours after the last save and preserves account 
  assert.equal(history.account().balance,12345);
  assert.deepEqual(JSON.parse(storage.getItem(HISTORY_KEY)).rounds,[]);
 });
+
+test('History removes legacy showcase rounds while retaining other saved games',()=>{
+ const storage=memory(),history=new HistoryStore(storage);
+ const regular=snapshot();
+ const showcase=snapshot(new World('eight'),new Referee('eight','high'),'showcase');
+ showcase.tournament={key:'club',stage:0,showcase:true,controlledSide:null};
+ storage.setItem(HISTORY_KEY,JSON.stringify({version:1,rounds:[regular,showcase]}));
+ assert.deepEqual(history.read().map(round=>round.id),[regular.id]);
+ assert.deepEqual(JSON.parse(storage.getItem(HISTORY_KEY)).rounds.map(round=>round.id),[regular.id]);
+});

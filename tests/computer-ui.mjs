@@ -375,6 +375,73 @@ try{
  assert.match(await page.locator('#result-summary').textContent(),/你单杆 147 分/);
  assert.match(await page.locator('#result-payout').textContent(),/147 奖金 £40,000\.00.*单杆最高分奖 £15,000\.00/);
  assert.equal((await account()).balance-balanceBeforeMaximum,55500000);
+ await page.locator('#result-home').click();
+ const beforeShowcase=(await account()).balance;
+ for(const [mode,side] of [['nine',0],['eight',1],['snooker',0]]){
+  await page.locator(`[data-mode="${mode}"]`).click();
+  await opponent.selectOption('showcase');
+  await page.locator('#start-game').click();
+  assert.equal(await events.locator('[data-event]').count(),Object.keys(EVENTS[mode]).length);
+  assert.equal(await events.locator('[data-event]').evaluateAll(buttons=>buttons.filter(button=>button.disabled).length),0);
+  await events.locator('[data-event="club"]').click();
+  assert.match(await page.locator('#mode-label').textContent(),/高手如云/);
+  await page.waitForFunction(()=>billiards.world.running);
+  await page.locator('#take-over').click();
+  const before=await page.evaluate(()=>({id:billiards.state.roundId,turn:billiards.ref.turn,scores:billiards.ref.scores}));
+  await page.locator(`[data-take-side="${side}"]`).click();
+  assert.match(await scoreboard.textContent(),side===0?/甲方（你）/:/乙方（你）/);
+  assert.deepEqual(await page.evaluate(()=>billiards.ref.scores),before.scores);
+  const shots=await page.evaluate(()=>billiards.ref.shots);
+  assert.equal(await page.evaluate(()=>billiards.ref.difficulty),'high');
+  if(mode==='eight'){
+   await page.keyboard.press('Escape');
+   await page.locator('#history-open').click();
+   assert.equal(await page.locator(`[data-round="${before.id}"]`).count(),0);
+   await page.keyboard.press('Escape');
+   continue;
+  }
+  await page.locator('#take-over').filter({hasText:'交还电脑'}).click();
+  assert.doesNotMatch(await scoreboard.textContent(),/（你）/);
+  await page.waitForFunction(shots=>billiards.ref.shots>shots||billiards.ref.done,shots);
+  await page.keyboard.press('Escape');
+  const returned=await page.evaluate(({key,id})=>JSON.parse(localStorage.getItem(key)).rounds.find(round=>round.id===id),{key:storeKey,id:before.id});
+  assert.equal(returned,undefined);
+ }
+ assert.equal((await account()).balance,beforeShowcase);
+ await page.locator('[data-mode="nine"]').click();
+ await opponent.selectOption('showcase');
+ await page.locator('#start-game').click();
+ await events.locator('[data-event="uk"]').click();
+ await checkScoreboard(0,0,'抢 9');
+ await page.evaluate(()=>{
+  const {world,ref}=billiards;
+  Object.assign(ref,{turn:1,shots:4});
+  world.cuePlacementZone=null;
+  for(const b of world.balls)if(b.id&&b.id!==9)b.potted=true;
+  ref.begin(world);world.pot(world.balls.find(b=>b.id===9));
+  world.firstHit=9;world.events.unshift({type:'hit',a:0,b:9});world.running=true;
+ });
+ await page.locator('#take-over-result').click();
+ await page.locator('[data-take-side="1"]').click();
+ await checkScoreboard(0,1,'抢 9');
+ assert.match(await scoreboard.textContent(),/乙方（你）/);
+ assert.equal(await page.locator('#confirm-placement').isVisible(),true);
+ await page.locator('#confirm-placement').click();
+ await page.keyboard.press('Space');
+ await page.waitForFunction(()=>billiards.view.stance&&billiards.view.postureSettled);
+ assert.equal(await page.evaluate(()=>billiards.ref.turn),1);
+ const targetAngle=await page.evaluate(()=>billiards.view.aim);
+ await page.evaluate(angle=>billiards.shot(angle,.5),targetAngle);
+ await page.waitForFunction(()=>billiards.world.running);
+ await page.locator('#take-over').filter({hasText:'交还电脑'}).click();
+ await checkScoreboard(0,1,'抢 9');
+ assert.doesNotMatch(await scoreboard.textContent(),/（你）/);
+ const showcaseId=await page.evaluate(()=>billiards.state.roundId);
+ await page.reload();
+ await page.waitForFunction(()=>window.billiards?.world);
+ await page.locator('#history-open').click();
+ assert.equal(await page.locator(`[data-round="${showcaseId}"]`).count(),0);
+ assert.equal((await account()).balance,beforeShowcase);
  assert.deepEqual(errors,[]);
  console.log('All four computer levels played a turn. Saved computer turn resumed successfully.');
 }finally{

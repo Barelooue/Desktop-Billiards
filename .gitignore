@@ -10,3 +10,7 @@ __pycache__/
 *.lnk
 .env
 .env.*
+
+*.mp4
+*.mov
+*.webm

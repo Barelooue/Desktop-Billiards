@@ -30,13 +30,18 @@ internal static class Program {
  }
 }
 internal sealed class TableWindow:Form {
+ const double FloatingAspect=16.0/9;
+ const int WmSizing=0x0214;
+ [StructLayout(LayoutKind.Sequential)] struct SizingRect { public int Left,Top,Right,Bottom; }
  WebView2 web; bool test,closeReady,closing;
+ bool floating,switchingWindowMode,testWindowed;
+ Rectangle floatingBounds;
  public TableWindow(string[] args) {
   test=args.Contains("--test"); Text="一个人的台球 · Desktop Billiards"; BackColor=Color.FromArgb(17,27,25);
   Icon=Icon.ExtractAssociatedIcon(Application.ExecutablePath);
-  bool windowed=test&&!args.Contains("--fullscreen");
-  FormBorderStyle=windowed?FormBorderStyle.Sizable:FormBorderStyle.None;
-  if(windowed){ClientSize=new Size(1400,900);StartPosition=FormStartPosition.CenterScreen;}else{Bounds=Screen.FromPoint(Cursor.Position).Bounds;WindowState=FormWindowState.Maximized;}
+  testWindowed=test&&!args.Contains("--fullscreen");
+  FormBorderStyle=testWindowed?FormBorderStyle.Sizable:FormBorderStyle.None;
+  if(testWindowed){ClientSize=new Size(1400,900);StartPosition=FormStartPosition.CenterScreen;}else{Bounds=Screen.FromPoint(Cursor.Position).Bounds;WindowState=FormWindowState.Maximized;}
   Shown+=async (s,e)=>await Initialize();
  }
  async Task Initialize(){
@@ -49,7 +54,7 @@ internal sealed class TableWindow:Form {
    var env=await CoreWebView2Environment.CreateAsync(null,profile,options);await web.EnsureCoreWebView2Async(env);
    var core=web.CoreWebView2;core.Settings.AreDevToolsEnabled=test;core.Settings.AreDefaultContextMenusEnabled=false;core.Settings.IsStatusBarEnabled=false;core.Settings.IsZoomControlEnabled=false;
    core.Settings.IsGeneralAutofillEnabled=false;core.Settings.IsPasswordAutosaveEnabled=false;core.Settings.AreBrowserAcceleratorKeysEnabled=false;
-   Deactivate+=(s,e)=>{try{core.MemoryUsageTargetLevel=CoreWebView2MemoryUsageTargetLevel.Low;core.PostWebMessageAsJson("{\"type\":\"pause\"}");}catch{}};
+   Deactivate+=(s,e)=>{if(!floating&&!switchingWindowMode)try{core.MemoryUsageTargetLevel=CoreWebView2MemoryUsageTargetLevel.Low;core.PostWebMessageAsJson("{\"type\":\"pause\"}");}catch{}};
    Activated+=(s,e)=>{try{core.MemoryUsageTargetLevel=CoreWebView2MemoryUsageTargetLevel.Normal;}catch{}};
    core.SetVirtualHostNameToFolderMapping("billiards.local",Path.Combine(AppDomain.CurrentDomain.BaseDirectory,"web"),CoreWebView2HostResourceAccessKind.DenyCors);
    core.NavigationStarting+=(s,e)=>{Uri uri;if(!Uri.TryCreate(e.Uri,UriKind.Absolute,out uri)||uri.Host!="billiards.local")e.Cancel=true;};
@@ -65,9 +70,57 @@ internal sealed class TableWindow:Form {
    core.PermissionRequested+=(s,e)=>e.State=CoreWebView2PermissionState.Deny;
    core.WebMessageReceived+=OnWebMessage;
    string desktop=await Task.Run(()=>DesktopSource.Read());
-   await core.AddScriptToExecuteOnDocumentCreatedAsync("window.DESKTOP_SOURCE="+desktop+";window.BILLIARDS_TEST="+(test?"true":"false")+";");
+   await core.AddScriptToExecuteOnDocumentCreatedAsync("window.DESKTOP_SOURCE="+desktop+";window.BILLIARDS_TEST="+(test?"true":"false")+";window.BILLIARDS_WINDOW_MODE="+(floating?"true":"false")+";");
    core.Navigate("https://billiards.local/index.html");
   }catch(Exception ex){MessageBox.Show(this,"无法启动球台。请确认已安装 Microsoft Edge WebView2 Runtime。\n\n"+ex.Message,"一个人的台球",MessageBoxButtons.OK,MessageBoxIcon.Error);Close();}
+ }
+ int MaximumFloatingWidth(Rectangle area,Size border){
+  return Math.Max(1,Math.Min(area.Width-border.Width,(int)((area.Height-border.Height)*FloatingAspect)));
+ }
+ void ToggleFloatingWindow(){
+  var screen=Screen.FromControl(this);
+  switchingWindowMode=true;
+  try{
+   if(floating){
+    if(WindowState==FormWindowState.Normal)floatingBounds=Bounds;
+    floating=false;TopMost=false;MinimumSize=Size.Empty;
+    FormBorderStyle=testWindowed?FormBorderStyle.Sizable:FormBorderStyle.None;
+    MaximizeBox=true;MinimizeBox=true;
+    if(testWindowed)ClientSize=new Size(1400,900);
+    else{Bounds=screen.Bounds;WindowState=FormWindowState.Maximized;}
+   }else{
+    floating=true;TopMost=true;WindowState=FormWindowState.Normal;
+    FormBorderStyle=FormBorderStyle.Sizable;MaximizeBox=false;MinimizeBox=false;
+    var area=screen.WorkingArea;
+    var border=SizeFromClientSize(Size.Empty);
+    int max=MaximumFloatingWidth(area,border);
+    int min=Math.Min(800,max);
+    MinimumSize=new Size(min+border.Width,(int)Math.Round(min/FloatingAspect)+border.Height);
+    int width=Math.Max(min,Math.Min(max,floatingBounds.IsEmpty?(int)(max*.78):floatingBounds.Width-border.Width));
+    var size=new Size(width+border.Width,(int)Math.Round(width/FloatingAspect)+border.Height);
+    var point=floatingBounds.IsEmpty?new Point(area.Right-size.Width-20,area.Bottom-size.Height-20):floatingBounds.Location;
+    Bounds=new Rectangle(Math.Max(area.Left,Math.Min(point.X,area.Right-size.Width)),
+     Math.Max(area.Top,Math.Min(point.Y,area.Bottom-size.Height)),size.Width,size.Height);
+   }
+   web.CoreWebView2.MemoryUsageTargetLevel=CoreWebView2MemoryUsageTargetLevel.Normal;
+  }finally{switchingWindowMode=false;}
+ }
+ protected override void WndProc(ref Message message){
+  if(floating&&message.Msg==WmSizing){
+   var rect=(SizingRect)Marshal.PtrToStructure(message.LParam,typeof(SizingRect));
+   var border=new Size(Width-ClientSize.Width,Height-ClientSize.Height);
+   int edge=message.WParam.ToInt32();
+   int width=edge==3||edge==6?(int)Math.Round((rect.Bottom-rect.Top-border.Height)*FloatingAspect):rect.Right-rect.Left-border.Width;
+   int max=MaximumFloatingWidth(Screen.FromRectangle(Rectangle.FromLTRB(rect.Left,rect.Top,rect.Right,rect.Bottom)).WorkingArea,border);
+   width=Math.Max(Math.Min(800,max),Math.Min(width,max));
+   int height=(int)Math.Round(width/FloatingAspect)+border.Height;
+   width+=border.Width;
+   if(edge==1||edge==4||edge==7)rect.Left=rect.Right-width;else rect.Right=rect.Left+width;
+   if(edge==3||edge==4||edge==5)rect.Top=rect.Bottom-height;else rect.Bottom=rect.Top+height;
+   Marshal.StructureToPtr(rect,message.LParam,false);
+   message.Result=new IntPtr(1);return;
+  }
+  base.WndProc(ref message);
  }
  static bool IsEventSource(string address){
   Uri uri;
@@ -84,6 +137,11 @@ internal sealed class TableWindow:Form {
    object type;
    if(!data.TryGetValue("type",out type))return;
    if((string)type=="exit"){Close();return;}
+   if((string)type=="toggleFloating"){
+    try{ToggleFloatingWindow();}
+    finally{web.CoreWebView2.PostWebMessageAsJson(json.Serialize(new {type="windowMode",floating}));}
+    return;
+   }
    if((string)type!="calendar"||!data.ContainsKey("source")||!data.ContainsKey("id"))return;
    string source=data["source"] as string,id=data["id"] as string;
    if(String.IsNullOrEmpty(id)||id.Length>64)return;
